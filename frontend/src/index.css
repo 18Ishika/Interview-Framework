@@ -156,3 +156,18 @@ img {
   color: var(--color-primary);
   margin-bottom: 10px;
 }
+
+/* Clerk width fix - add to bottom of index.css */
+.cl-rootBox,
+.cl-signUp-root,
+.cl-signIn-root,
+.cl-card,
+.cl-main,
+.cl-form,
+.cl-internal-b3fm6y {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: unset !important;
+  box-shadow: none !important;
+  border: none !important;
+}
