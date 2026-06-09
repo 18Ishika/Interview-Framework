@@ -2,12 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import './App.css';
-
+import { useBackendSync } from './hooks/useBackendSync';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
 import DashboardPreview from './components/DashboardPreview';
+import Profile from './pages/Profile';
 
 import Login from './pages/login';
 import Signup from './pages/signup';
@@ -19,6 +20,7 @@ if (!PUBLISHABLE_KEY) {
 }
 
 function HomePage() {
+  useBackendSync();
   return (
     <div className="app">
       <Navbar />
@@ -51,6 +53,11 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login/*" element={<Login />} />
           <Route path="/signup/*" element={<Signup />} />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
           <Route path="/dashboard-preview" element={
             <ProtectedRoute>
               <DashboardPreview />

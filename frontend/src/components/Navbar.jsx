@@ -80,6 +80,25 @@ const Navbar = () => {
               Hi, {user.firstName || user.emailAddresses[0].emailAddress}
             </span>
             <button
+            onClick={() => navigate('/profile')}
+            style={{
+              padding: '8px 20px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border-strong)',
+              background: 'transparent',
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Profile
+          </button>
+            <button
               onClick={() => navigate('/dashboard-preview')}
               style={{
                 padding: '8px 20px',
