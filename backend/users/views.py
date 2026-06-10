@@ -1,9 +1,13 @@
-from django.shortcuts import render
 from rest_framework import viewsets
-from .serializers import UserSerializer
-from .models import User
 
-# User View Set
+from .models import User
+from .serializers import UserSerializer
+
+
 class UserViewSet(viewsets.ModelViewSet):
+
     queryset = User.objects.all()
+
     serializer_class = UserSerializer
+
+    lookup_field = "clerk_user_id"
