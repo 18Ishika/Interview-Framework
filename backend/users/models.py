@@ -23,3 +23,13 @@ class User(models.Model):
 
     def __str__(self):
         return f"{self.clerk_user_id} ({self.role})"
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def __str__(self):
+        return f"{self.clerk_user_id} ({self.role})"
