@@ -41,7 +41,7 @@ export default function Profile() {
       const token = await getToken({ skipCache: true });
       const formData = new FormData();
       if (resume) formData.append('resume', resume);
-      if (photo) formData.append('photo', photo);
+      if (photo) formData.append('profile_img', photo);
 
       const res = await fetch(`${API_BASE}/profile/`, {
         method: 'PATCH',
@@ -59,10 +59,10 @@ export default function Profile() {
   };
 
   if (loading) return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       background: 'var(--color-bg-primary)',
       color: 'var(--color-text-primary)',
@@ -195,8 +195,8 @@ export default function Profile() {
           style={{
             width: '100%',
             padding: '12px',
-            background: saving || (!resume && !photo) 
-              ? 'var(--color-bg-tertiary)' 
+            background: saving || (!resume && !photo)
+              ? 'var(--color-bg-tertiary)'
               : 'var(--color-primary)',
             color: saving || (!resume && !photo)
               ? 'var(--color-text-muted)'
@@ -219,8 +219,8 @@ export default function Profile() {
             marginTop: 16,
             textAlign: 'center',
             fontSize: 13,
-            color: message.includes('success') 
-              ? 'var(--color-primary)' 
+            color: message.includes('success')
+              ? 'var(--color-primary)'
               : '#e53e3e',
           }}>
             {message}
