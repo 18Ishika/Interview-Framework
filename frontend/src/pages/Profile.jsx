@@ -20,7 +20,7 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const token = await getToken({ skipCache: true });
-        const res = await fetch(`${API_BASE}/profile/`, {
+        const res = await fetch(`${API_BASE}/user/profile/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -43,7 +43,7 @@ export default function Profile() {
       if (resume) formData.append('resume', resume);
       if (photo) formData.append('profile_img', photo);
 
-      const res = await fetch(`${API_BASE}/profile/`, {
+      const res = await fetch(`${API_BASE}/user/profile/`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
