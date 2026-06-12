@@ -1,0 +1,554 @@
+/* ===================================================
+   AuthPages.css — Login & Signup
+   Uses the same CSS variables as index.css
+   =================================================== */
+
+/* ---------- Page Shell ---------- */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+/* ---------- Animated Background Blobs ---------- */
+.auth-bg-blobs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.25;
+  animation: blobFloat 8s ease-in-out infinite;
+}
+
+.blob-1 {
+  width: 520px;
+  height: 520px;
+  background: var(--color-primary);
+  top: -160px;
+  left: -120px;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 380px;
+  height: 380px;
+  background: var(--color-primary-mid);
+  bottom: -100px;
+  left: 200px;
+  animation-delay: 2.5s;
+}
+
+.blob-3 {
+  width: 300px;
+  height: 300px;
+  background: #a78bfa;
+  top: 40%;
+  left: 30%;
+  animation-delay: 5s;
+}
+
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(18px, -24px) scale(1.04); }
+  66%       { transform: translate(-12px, 16px) scale(0.97); }
+}
+
+/* ---------- Left Panel ---------- */
+.auth-left {
+  width: 52%;
+  min-height: 100vh;
+  background: linear-gradient(145deg, var(--color-primary-dark) 0%, var(--color-primary) 60%, #8B68FF 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 36px 56px 56px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.auth-left::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ---------- Logo ---------- */
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  margin-bottom: auto;
+}
+
+.auth-logo-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.auth-logo-text {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.4px;
+}
+
+/* ---------- Left Content ---------- */
+.auth-left-content {
+  margin-top: 60px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 460px;
+}
+
+.auth-tagline-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  margin-bottom: 22px;
+  width: fit-content;
+}
+
+.auth-headline {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.18;
+  letter-spacing: -1px;
+  margin-bottom: 18px;
+}
+
+.auth-headline-accent {
+  color: rgba(255, 255, 255, 0.75);
+  position: relative;
+}
+
+.auth-headline-accent::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+}
+
+.auth-subtext {
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 40px;
+  max-width: 380px;
+}
+
+/* ---------- Stats Row ---------- */
+.auth-stats {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 20px 28px;
+  margin-bottom: 36px;
+  backdrop-filter: blur(8px);
+}
+
+.auth-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auth-stat-number {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.auth-stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-align: center;
+}
+
+.auth-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- Testimonial Row ---------- */
+.auth-testimonial {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.auth-testimonial-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.auth-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.15));
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-display);
+}
+
+.auth-testimonial-meta {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 14px;
+  font-weight: 500;
+}
+
+/* ---------- Feature List (Signup) ---------- */
+.auth-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.auth-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-feature-icon {
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.auth-feature-label {
+  font-size: 14.5px;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+/* ---------- Right Panel ---------- */
+.auth-right {
+  width: 48%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 64px;
+  position: relative;
+  z-index: 1;
+  background: var(--color-bg-secondary);
+}
+
+.auth-form-wrapper {
+  width: 100%;
+  
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  box-shadow: 0 4px 24px rgba(108, 71, 255, 0.06);
+}
+
+.auth-form-header {
+  margin-bottom: 28px;
+}
+
+.auth-form-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.auth-form-subtitle {
+  font-size: 14.5px;
+  color: var(--color-text-secondary);
+}
+
+.auth-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  transition: color 0.15s;
+}
+.auth-link:hover { color: var(--color-primary-hover); }
+
+/* ---------- Clerk Component Overrides ---------- */
+.clerk-root {
+  width: 100% !important;
+}
+
+.clerk-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 400px !important;
+}
+
+.clerk-hide {
+  display: none !important;
+}
+
+/* Social Buttons */
+.clerk-social-btn {
+  width: 100% !important;
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  height: 44px !important;
+  font-family: var(--font-body) !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  color: var(--color-text-primary) !important;
+  transition: background 0.15s, border-color 0.15s !important;
+}
+.clerk-social-btn:hover {
+  background: var(--color-bg-tertiary) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+.clerk-social-btn-text {
+  font-family: var(--font-body) !important;
+  font-weight: 500 !important;
+}
+
+/* Divider */
+.clerk-divider-line {
+  background: var(--color-border) !important;
+}
+
+.clerk-divider-text {
+  font-family: var(--font-body) !important;
+  font-size: 12px !important;
+  color: var(--color-text-muted) !important;
+}
+
+/* Field Labels */
+.clerk-field-label {
+  font-family: var(--font-body) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: var(--color-text-primary) !important;
+  margin-bottom: 6px !important;
+}
+
+/* Inputs */
+.clerk-field-input {
+  font-family: var(--font-body) !important;
+  font-size: 14.5px !important;
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--color-text-primary) !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+.clerk-field-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.12) !important;
+  outline: none !important;
+}
+
+/* Primary Button */
+.clerk-btn-primary {
+  font-family: var(--font-body) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-radius: var(--radius-md) !important;
+  height: 46px !important;
+  border: none !important;
+  letter-spacing: -0.1px !important;
+  transition: background 0.15s, transform 0.1s !important;
+}
+.clerk-btn-primary:hover {
+  background: var(--color-primary-hover) !important;
+}
+.clerk-btn-primary:active {
+  transform: scale(0.98) !important;
+}
+
+/* Footer Links */
+.clerk-footer-text {
+  font-family: var(--font-body) !important;
+  font-size: 13.5px !important;
+  color: var(--color-text-secondary) !important;
+}
+.clerk-footer-link {
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Alert / Error */
+.clerk-alert-text {
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  color: var(--color-danger) !important;
+}
+
+/* Show password toggle */
+.clerk-show-pw {
+  color: var(--color-text-muted) !important;
+}
+.clerk-show-pw:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Resend code link */
+.clerk-resend-link {
+  color: var(--color-primary) !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+}
+
+/* Force Clerk to respect parent width */
+.auth-form-wrapper * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Fix Clerk internal full-bleed containers */
+.cl-rootBox, .cl-signIn-root, .cl-signUp-root {
+  width: 100% !important;
+}
+
+.cl-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+.cl-main {
+  padding: 0 !important;
+}
+
+.cl-socialButtonsBlockButton {
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.cl-formButtonPrimary {
+  background: var(--color-primary) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-body) !important;
+}
+.cl-formButtonPrimary:hover {
+  background: var(--color-primary-hover) !important;
+}
+
+.cl-formFieldInput {
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--color-bg-primary) !important;
+  font-family: var(--font-body) !important;
+}
+.cl-formFieldInput:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.12) !important;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .auth-left {
+    display: none;
+  }
+  .auth-right {
+    width: 100%;
+    padding: 40px 24px;
+  }
+  .auth-form-wrapper {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-right {
+    padding: 32px 20px;
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+}
+
+/* Clerk exact class overrides from DevTools inspection */
+.cl-rootBox,
+.cl-signUp-root,
+.cl-signIn-root,
+.cl-cardBox,
+.cl-card,
+.cl-main,
+.cl-form,
+.cl-footer {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: unset !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.cl-cardBox {
+  border: none !important;
+  padding: 0 !important;
+}

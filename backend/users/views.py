@@ -1,6 +1,10 @@
-from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from .serializers import UserSerializer
+from .models import User
 from .serializers import UserSerializer
 from .utils.api_response import (
     success_response,
@@ -8,59 +12,63 @@ from .utils.api_response import (
 )
 
 
-class UserViewSet(viewsets.GenericViewSet):
+# Called after signup/login from frontend
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def sync_user(request):
+    user = request.user  # already get_or_created in ClerkAuthentication
+    serializer = UserSerializer(user)
+    return Response({
+        "message": "User synced successfully",
+        "user": serializer.data
+    }, status=status.HTTP_200_OK)
 
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user
+# Get current logged in user profile
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def me(request):
 
-    def retrieve(self, request):
+    serializer = UserSerializer(
+        request.user
+    )
 
-        serializer = self.get_serializer(
-            self.get_object()
-        )
+    return success_response(
+        data=serializer.data,
+        message="Profile fetched successfully",
+        code="PROFILE_FETCHED"
+    )
 
-        return success_response(
-            data=serializer.data,
-            message="Profile fetched successfully",
-            code="PROFILE_FETCHED"
-        )
 
-    def partial_update(self, request):
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def profile(request):
+    user = request.user
 
-        serializer = self.get_serializer(
-            self.get_object(),
-            data=request.data,
-            partial=True
-        )
+    if request.method == "GET":
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
 
-        if serializer.is_valid():
-
-            serializer.save()
-
-            return success_response(
-                data=serializer.data,
-                message="Profile updated successfully",
-                code="PROFILE_UPDATED"
+    if request.method == "PATCH":
+            serializer = UserSerializer(
+                request.user,
+                data=request.data,
+                partial=True
             )
 
-        return error_response(
-            errors=serializer.errors,
-            message="Validation failed",
-            code="VALIDATION_ERROR",
-            status_code=400
-        )
+            if serializer.is_valid():
 
-    def destroy(self, request):
+                serializer.save()
 
-        user = self.get_object()
+                return success_response(
+                    data=serializer.data,
+                    message="Profile updated successfully",
+                    code="PROFILE_UPDATED"
+                )
 
-        user.delete()
-
-        return success_response(
-            data=None,
-            message="Account deleted successfully",
-            code="ACCOUNT_DELETED"
-        )
+            return error_response(
+                errors=serializer.errors,
+                message="Validation failed",
+                code="VALIDATION_ERROR",
+                status_code=400
+            )
