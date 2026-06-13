@@ -18,6 +18,8 @@ class User(models.Model):
 
     resume_url = models.URLField(blank=True, null=True)
 
+    skills = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )
