@@ -10,12 +10,10 @@ from .utils.api_response import (
     error_response
 )
 
-
-# Called after signup/login from frontend
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def sync_user(request):
-    user = request.user  # already get_or_created in ClerkAuthentication
+    user = request.user 
     serializer = UserSerializer(user)
     return Response({
         "message": "User synced successfully",
