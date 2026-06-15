@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&display=swap');
+
+/* ===== InterviewIQ Color Theme ===== */
+:root {
+  /* Primary Brand */
+  --color-primary: #6C47FF;
+  --color-primary-hover: #5836F0;
+  --color-primary-light: #EEE9FF;
+  --color-primary-mid: #AFA9EC;
+  --color-primary-dark: #3C3489;
+
+  /* Background */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F8F7FC;
+  --color-bg-tertiary: #F1EFF9;
+
+  /* Text */
+  --color-text-primary: #1A1523;
+  --color-text-secondary: #6B6580;
+  --color-text-muted: #9D97B0;
+
+  /* Border */
+  --color-border: #E4E0F0;
+  --color-border-strong: #C8C3E0;
+
+  /* Feature card accent colors */
+  --color-teal-bg: #E1F5EE;
+  --color-teal-fg: #0F6E56;
+  --color-amber-bg: #FAEEDA;
+  --color-amber-fg: #854F0B;
+  --color-coral-bg: #FAECE7;
+  --color-coral-fg: #993C1D;
+
+  /* Semantic */
+  --color-success: #1D9E75;
+  --color-warning: #BA7517;
+  --color-danger: #E24B4A;
+
+  /* Typography */
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ===== Utility Classes ===== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.section {
+  padding: 80px 0;
+}
+
+/* Primary Button */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.1s;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+.btn-primary:active { transform: scale(0.98); }
+
+/* Outline Button */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-text-primary);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 500;
+  border: 1px solid var(--color-border-strong);
+  transition: background 0.2s;
+}
+.btn-outline:hover { background: var(--color-bg-tertiary); }
+
+/* Badge / Pill */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+}
+
+/* Section label */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 10px;
+}
+
+/* Clerk width fix - add to bottom of index.css */
+.cl-rootBox,
+.cl-signUp-root,
+.cl-signIn-root,
+.cl-card,
+.cl-main,
+.cl-form,
+.cl-internal-b3fm6y {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: unset !important;
+  box-shadow: none !important;
+  border: none !important;
+}
