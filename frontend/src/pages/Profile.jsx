@@ -1,0 +1,579 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
+import { API_BASE, SERVER_BASE } from '../lib/config';
+
+export default function Profile() {
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
+
+  const [profile, setProfile] = useState(null);
+  const [resume, setResume] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [skills, setSkills] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [education, setEducation] = useState([]);
+  const [parsing, setParsing] = useState(false);
+  const [newSkill, setNewSkill] = useState('');
+  const [showSkillInput, setShowSkillInput] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = await getToken({ skipCache: true });
+        const res = await fetch(`${API_BASE}/user/profile/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setProfile(data);
+        if (data.skills) setSkills(data.skills);
+        if (data.projects) setProjects(data.projects);
+        if (data.education) setEducation(data.education);
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const parseResume = async (file, token) => {
+    setParsing(true);
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      const res = await fetch(`${API_BASE}/resume/parse/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.skills) setSkills(data.skills);
+      if (data.projects) setProjects(data.projects.map(p => ({ ...p, editing: false })));
+      if (data.education) setEducation(data.education.map(e => ({ text: e, editing: false })));
+      if (data.job_recommendations) setProfile(prev => ({ ...prev, job_recommendations: data.job_recommendations }));
+    } catch (err) {
+      console.error('Resume parsing failed:', err);
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      const token = await getToken({ skipCache: true });
+      const formData = new FormData();
+      if (resume) formData.append('resume', resume);
+      if (photo) formData.append('profile_img', photo);
+
+      const res = await fetch(`${API_BASE}/user/profile/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      setProfile(data);
+      setMessage('Profile updated successfully!');
+      if (resume) await parseResume(resume, token);
+    } catch (err) {
+      setMessage('Something went wrong.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // skill handlers
+  const handleDeleteSkill = (index) => {
+    setSkills(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddSkill = () => {
+    const trimmed = newSkill.trim();
+    if (trimmed && !skills.includes(trimmed)) {
+      setSkills(prev => [...prev, trimmed]);
+    }
+    setNewSkill('');
+    setShowSkillInput(false);
+  };
+
+  // project handlers
+  const handleProjectChange = (index, value) => {
+    setProjects(prev => prev.map((p, i) => i === index ? { ...p, title: value } : p));
+  };
+
+  const handleProjectEditToggle = (index) => {
+    setProjects(prev => prev.map((p, i) => i === index ? { ...p, editing: !p.editing } : p));
+  };
+
+  const handleDeleteProject = (index) => {
+    setProjects(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddProject = () => {
+    setProjects(prev => [...prev, { title: '', description: [], editing: true }]);
+  };
+
+  // education handlers
+  const handleEducationChange = (index, value) => {
+    setEducation(prev => prev.map((e, i) => i === index ? { ...e, text: value } : e));
+  };
+
+  const handleEducationEditToggle = (index) => {
+    setEducation(prev => prev.map((e, i) => i === index ? { ...e, editing: !e.editing } : e));
+  };
+
+  const handleDeleteEducation = (index) => {
+    setEducation(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddEducation = () => {
+    setEducation(prev => [...prev, { text: '', editing: true }]);
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '8px 10px',
+    background: 'var(--color-bg-primary)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 13,
+    color: 'var(--color-text-primary)',
+    fontFamily: 'var(--font-body)',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const iconBtnStyle = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    fontSize: 14,
+    color: 'var(--color-text-secondary)',
+  };
+
+  if (loading) return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--color-bg-primary)',
+      color: 'var(--color-text-primary)',
+      fontFamily: 'var(--font-body)',
+    }}>
+      Loading...
+    </div>
+  );
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--color-bg-primary)',
+      fontFamily: 'var(--font-body)',
+      padding: '60px 24px',
+    }}>
+      <div style={{
+        maxWidth: 560,
+        margin: '0 auto',
+        background: 'var(--color-bg-secondary)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '40px',
+      }}>
+        {/* Header */}
+        <div style={{ marginBottom: 32 }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-secondary)',
+              fontSize: 13,
+              cursor: 'pointer',
+              padding: 0,
+              marginBottom: 16,
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            ← Back
+          </button>
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 24,
+            fontWeight: 700,
+            color: 'var(--color-text-primary)',
+            margin: 0,
+          }}>Your Profile</h1>
+          <p style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 14,
+            marginTop: 6,
+          }}>Upload your resume and photo</p>
+        </div>
+
+        {/* Photo Upload */}
+        <div style={{ marginBottom: 24 }}>
+          <label style={{
+            display: 'block',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            marginBottom: 8,
+          }}>
+            Profile Photo
+          </label>
+          {profile?.photo && (
+            <div style={{ marginBottom: 8 }}>
+              <img
+                src={`${SERVER_BASE}${profile.photo}`}
+                alt="Profile"
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid var(--color-border)',
+                }}
+              />
+            </div>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => setPhoto(e.target.files[0])}
+            style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+          />
+        </div>
+
+        {/* Resume Upload */}
+        <div style={{ marginBottom: 32 }}>
+          <label style={{
+            display: 'block',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--color-text-primary)',
+            marginBottom: 8,
+          }}>
+            Resume (PDF / DOCX)
+          </label>
+          {profile?.resume && (
+            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+              ✅ Resume uploaded
+            </p>
+          )}
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={e => setResume(e.target.files[0])}
+            style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+          />
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={saving || (!resume && !photo)}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: saving || (!resume && !photo) ? 'var(--color-bg-tertiary)' : 'var(--color-primary)',
+            color: saving || (!resume && !photo) ? 'var(--color-text-muted)' : '#fff',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            fontSize: 15,
+            fontWeight: 600,
+            cursor: saving || (!resume && !photo) ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-body)',
+            transition: 'background 0.15s',
+          }}
+        >
+          {saving ? 'Saving...' : 'Save Profile'}
+        </button>
+
+        {/* Message */}
+        {message && (
+          <p style={{
+            marginTop: 16,
+            textAlign: 'center',
+            fontSize: 13,
+            color: message.includes('success') ? 'var(--color-primary)' : '#e53e3e',
+          }}>
+            {message}
+          </p>
+        )}
+
+        {/* Parsing indicator */}
+        {parsing && (
+          <p style={{
+            marginTop: 12,
+            textAlign: 'center',
+            fontSize: 13,
+            color: 'var(--color-text-secondary)',
+          }}>
+            Extracting skills and projects from your resume...
+          </p>
+        )}
+
+        {/* Skills Section */}
+        {skills.length > 0 && (
+          <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+                margin: 0,
+              }}>Skills</h2>
+              <button
+                onClick={() => setShowSkillInput(true)}
+                style={{
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '4px 10px',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  color: 'var(--color-text-primary)',
+                  lineHeight: 1,
+                }}
+              >+</button>
+            </div>
+
+            {showSkillInput && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  autoFocus
+                  value={newSkill}
+                  onChange={e => setNewSkill(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddSkill()}
+                  placeholder="Type a skill and press Enter"
+                  style={inputStyle}
+                />
+                <button onClick={handleAddSkill} style={{
+                  padding: '6px 14px',
+                  background: 'var(--color-primary)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontFamily: 'var(--font-body)',
+                }}>Add</button>
+                <button onClick={() => { setShowSkillInput(false); setNewSkill(''); }} style={{
+                  padding: '6px 10px',
+                  background: 'none',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  color: 'var(--color-text-secondary)',
+                }}>✕</button>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {skills.map((skill, i) => (
+                <span key={i} style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 10px',
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {skill}
+                  <button
+                    onClick={() => handleDeleteSkill(i)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontSize: 11,
+                      color: 'var(--color-text-muted)',
+                      lineHeight: 1,
+                      marginLeft: 2,
+                    }}
+                  >✕</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Projects Section */}
+        {projects.length > 0 && (
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+                margin: 0,
+              }}>Projects</h2>
+              <button
+                onClick={handleAddProject}
+                style={{
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '4px 10px',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  color: 'var(--color-text-primary)',
+                  lineHeight: 1,
+                }}
+              >+</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {projects.map((project, i) => (
+                <div key={i} style={{
+                  padding: '10px 14px',
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {project.editing ? (
+                      <input
+                        autoFocus
+                        value={project.title}
+                        onChange={e => handleProjectChange(i, e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleProjectEditToggle(i)}
+                        style={{ ...inputStyle, marginBottom: 0 }}
+                      />
+                    ) : (
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        {project.title}
+                      </span>
+                    )}
+                    <button onClick={() => handleProjectEditToggle(i)} style={iconBtnStyle}>
+                      {project.editing ? '✓' : '✏️'}
+                    </button>
+                    <button onClick={() => handleDeleteProject(i)} style={{ ...iconBtnStyle, color: '#e53e3e' }}>
+                      ✕
+                    </button>
+                  </div>
+
+                  {project.description?.length > 0 && (
+                    <ul style={{ marginTop: 8, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {project.description.map((point, j) => (
+                        <li key={j} style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Education Section */}
+        {education.length > 0 && (
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+                margin: 0,
+              }}>Education</h2>
+              <button
+                onClick={handleAddEducation}
+                style={{
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '4px 10px',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  color: 'var(--color-text-primary)',
+                  lineHeight: 1,
+                }}
+              >+</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {education.map((edu, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                }}>
+                  {edu.editing ? (
+                    <input
+                      autoFocus
+                      value={edu.text}
+                      onChange={e => handleEducationChange(i, e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleEducationEditToggle(i)}
+                      style={{ ...inputStyle, marginBottom: 0 }}
+                    />
+                  ) : (
+                    <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)' }}>
+                      {edu.text}
+                    </span>
+                  )}
+                  <button onClick={() => handleEducationEditToggle(i)} style={iconBtnStyle}>
+                    {edu.editing ? '✓' : '✏️'}
+                  </button>
+                  <button onClick={() => handleDeleteEducation(i)} style={{ ...iconBtnStyle, color: '#e53e3e' }}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Job Recommendations Section */}
+        {profile?.job_recommendations?.length > 0 && (
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 16,
+              fontWeight: 600,
+              color: 'var(--color-text-primary)',
+              marginBottom: 12,
+            }}>Job Recommendations</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {profile.job_recommendations.map((rec, i) => (
+                <span key={i} style={{
+                  padding: '4px 12px',
+                  background: 'var(--color-bg-tertiary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  {rec.job}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
