@@ -1,33 +1,27 @@
+import uuid
 from django.db import models
-
-def resume_upload_path(instance, filename):
-    return f"resumes/{instance.clerk_user_id}/{filename}"
-
-def photo_upload_path(instance, filename):
-    return f"photos/{instance.clerk_user_id}/{filename}"
 
 class User(models.Model):
     ROLE_CHOICES = [
         ("candidate", "Candidate"),
+        ("admin", "Admin"),
     ]
 
-    clerk_user_id = models.CharField(max_length=255, unique=True, db_index=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="candidate")
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    clerk_user_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    first_name = models.CharField(max_length=255, blank=True)
+    last_name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     profile_img_url = models.URLField(blank=True, null=True)
-
     resume_url = models.URLField(blank=True, null=True)
-
-    skills = models.TextField(blank=True, null=True)
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    role_type = models.CharField(max_length=50, choices=ROLE_CHOICES, default="candidate")
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.clerk_user_id} ({self.role})"
+        return f"{self.first_name} {self.last_name} ({self.role_type})"
+    
     @property
     def is_authenticated(self):
         return True
@@ -36,14 +30,39 @@ class User(models.Model):
     def is_anonymous(self):
         return False
 
-    def __str__(self):
-        return f"{self.clerk_user_id} ({self.role})"
-    
+class Skill(models.Model):
+    CATEGORY_CHOICES = [
+        ("technical", "Technical"),
+        ("soft", "Soft"),
+        ("other", "Other"),
+    ]
 
-# Education Model
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="technical")
+
+    def __str__(self):
+        return self.name
+
+class CandidateSkill(models.Model):
+    PROFICIENCY_CHOICES = [
+        ("beginner", "Beginner"),
+        ("intermediate", "Intermediate"),
+        ("advanced", "Advanced"),
+        ("expert", "Expert"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="candidate_skills")
+    skill = models.ForeignKey(Skill, on_delete=models.CASCADE, related_name="candidates")
+    proficiency = models.CharField(max_length=50, choices=PROFICIENCY_CHOICES, default="beginner")
+
+    def __str__(self):
+        return f"{self.user} - {self.skill.name} ({self.proficiency})"
+
 class Education(models.Model):
-    EDUCATION_LEVELS = [
-         ("high_school", "High School"),
+    DEGREE_CHOICES = [
+        ("high_school", "High School"),
         ("intermediate", "Intermediate"),
         ("diploma", "Diploma"),
         ("bachelors", "Bachelors"),
@@ -51,61 +70,19 @@ class Education(models.Model):
         ("phd", "PhD"),
     ]
 
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="educations"
-    )
-
-    education_level = models.CharField(max_length=20, choices=EDUCATION_LEVELS)
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations")
     instituion_name = models.CharField(max_length=255)
-
-    degree = models.CharField(max_length=255, blank=True)
-
-    field_of_study = models.CharField(
-        max_length=255,
-        blank=True
-    )
-
-    grade = models.CharField(
-        max_length=20,
-        blank=True
-    )
-
-    start_date = models.DateField(
-        null=True,
-        blank=True
-    )
-
-    end_date = models.DateField(
-        null=True,
-        blank=True
-    )
-
-    is_current = models.BooleanField(
-        default=False
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
-
-    class Meta:
-        ordering = ["-end_date"]
+    degree = models.CharField(max_length=50, choices=DEGREE_CHOICES)
+    field_of_study = models.CharField(max_length=255, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
-        return (
-            f"{self.institution_name}"
-            f" - {self.degree}"
-        )
+        return f"{self.instituion_name} - {self.degree}"
 
 class Experience(models.Model):
-
     EMPLOYMENT_TYPES = [
         ("internship", "Internship"),
         ("full_time", "Full Time"),
@@ -114,58 +91,23 @@ class Experience(models.Model):
         ("freelance", "Freelance"),
     ]
 
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="experiences"
-    )
-
-    company_name = models.CharField(
-        max_length=255
-    )
-
-    job_title = models.CharField(
-        max_length=255
-    )
-
-    employment_type = models.CharField(
-        max_length=20,
-        choices=EMPLOYMENT_TYPES
-    )
-
-    start_date = models.DateField()
-
-    end_date = models.DateField(
-        null=True,
-        blank=True
-    )
-
-    is_current = models.BooleanField(
-        default=False
-    )
-
-    location = models.CharField(
-        max_length=255,
-        blank=True
-    )
-
-    description = models.TextField(
-        blank=True
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
-
-    class Meta:
-        ordering = ["-start_date"]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="experiences")
+    company_name = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    employment_type = models.CharField(max_length=50, choices=EMPLOYMENT_TYPES)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    desc = models.TextField(blank=True)
 
     def __str__(self):
-        return (
-            f"{self.job_title}"
-            f" at {self.company_name}"
-        )
+        return f"{self.title} at {self.company_name}"
+
+class Project(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="projects")
+    title = models.CharField(max_length=255)
+    desc = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.title
