@@ -137,17 +137,20 @@ export default function Profile() {
     setEducation(prev => [...prev, { text: '', editing: true }]);
   };
 
+  // ── Shared styles (aligned with index.css tokens) ──────────────────────────
+
   const inputStyle = {
     width: '100%',
     padding: '8px 10px',
     background: 'var(--color-bg-primary)',
-    border: '1px solid var(--color-primary)',
+    border: '1px solid var(--color-border-strong)',   // was --color-primary
     borderRadius: 'var(--radius-md)',
     fontSize: 13,
     color: 'var(--color-text-primary)',
     fontFamily: 'var(--font-body)',
     outline: 'none',
     boxSizing: 'border-box',
+    transition: 'border-color 0.15s',
   };
 
   const iconBtnStyle = {
@@ -158,6 +161,28 @@ export default function Profile() {
     fontSize: 14,
     color: 'var(--color-text-secondary)',
   };
+
+  const sectionHeadingStyle = {
+    fontFamily: 'var(--font-display)',
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--color-text-primary)',
+    margin: 0,
+  };
+
+  const addBtnStyle = {
+    background: 'var(--color-bg-tertiary)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '4px 10px',
+    fontSize: 18,
+    cursor: 'pointer',
+    color: 'var(--color-text-primary)',
+    lineHeight: 1,
+    transition: 'background 0.15s, border-color 0.15s',
+  };
+
+  const saveDisabled = saving || (!resume && !photo);
 
   if (loading) return (
     <div style={{
@@ -187,7 +212,9 @@ export default function Profile() {
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-lg)',
         padding: '40px',
+        boxShadow: 'var(--shadow-md)',
       }}>
+
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <button
@@ -201,7 +228,10 @@ export default function Profile() {
               padding: 0,
               marginBottom: 16,
               fontFamily: 'var(--font-body)',
+              transition: 'color 0.15s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
           >
             ← Back
           </button>
@@ -280,20 +310,22 @@ export default function Profile() {
         {/* Save Button */}
         <button
           onClick={handleSave}
-          disabled={saving || (!resume && !photo)}
+          disabled={saveDisabled}
           style={{
             width: '100%',
             padding: '12px',
-            background: saving || (!resume && !photo) ? 'var(--color-bg-tertiary)' : 'var(--color-primary)',
-            color: saving || (!resume && !photo) ? 'var(--color-text-muted)' : '#fff',
+            background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',  // was --color-primary
+            color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
             border: 'none',
             borderRadius: 'var(--radius-md)',
             fontSize: 15,
             fontWeight: 600,
-            cursor: saving || (!resume && !photo) ? 'not-allowed' : 'pointer',
+            cursor: saveDisabled ? 'not-allowed' : 'pointer',
             fontFamily: 'var(--font-body)',
             transition: 'background 0.15s',
           }}
+          onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
+          onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
         >
           {saving ? 'Saving...' : 'Save Profile'}
         </button>
@@ -304,7 +336,7 @@ export default function Profile() {
             marginTop: 16,
             textAlign: 'center',
             fontSize: 13,
-            color: message.includes('success') ? 'var(--color-primary)' : '#e53e3e',
+            color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
           }}>
             {message}
           </p>
@@ -326,25 +358,12 @@ export default function Profile() {
         {skills.length > 0 && (
           <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-                margin: 0,
-              }}>Skills</h2>
+              <h2 style={sectionHeadingStyle}>Skills</h2>
               <button
                 onClick={() => setShowSkillInput(true)}
-                style={{
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '4px 10px',
-                  fontSize: 18,
-                  cursor: 'pointer',
-                  color: 'var(--color-text-primary)',
-                  lineHeight: 1,
-                }}
+                style={addBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
               >+</button>
             </div>
 
@@ -360,14 +379,18 @@ export default function Profile() {
                 />
                 <button onClick={handleAddSkill} style={{
                   padding: '6px 14px',
-                  background: 'var(--color-primary)',
+                  background: 'var(--color-primary-dark)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
                   cursor: 'pointer',
                   fontSize: 13,
                   fontFamily: 'var(--font-body)',
-                }}>Add</button>
+                  transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-primary-hover)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-primary-dark)')}
+                >Add</button>
                 <button onClick={() => { setShowSkillInput(false); setNewSkill(''); }} style={{
                   padding: '6px 10px',
                   background: 'none',
@@ -418,25 +441,12 @@ export default function Profile() {
         {projects.length > 0 && (
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-                margin: 0,
-              }}>Projects</h2>
+              <h2 style={sectionHeadingStyle}>Projects</h2>
               <button
                 onClick={handleAddProject}
-                style={{
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '4px 10px',
-                  fontSize: 18,
-                  cursor: 'pointer',
-                  color: 'var(--color-text-primary)',
-                  lineHeight: 1,
-                }}
+                style={addBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
               >+</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -464,7 +474,7 @@ export default function Profile() {
                     <button onClick={() => handleProjectEditToggle(i)} style={iconBtnStyle}>
                       {project.editing ? '✓' : '✏️'}
                     </button>
-                    <button onClick={() => handleDeleteProject(i)} style={{ ...iconBtnStyle, color: '#e53e3e' }}>
+                    <button onClick={() => handleDeleteProject(i)} style={{ ...iconBtnStyle, color: 'var(--color-danger)' }}>
                       ✕
                     </button>
                   </div>
@@ -488,25 +498,12 @@ export default function Profile() {
         {education.length > 0 && (
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-                margin: 0,
-              }}>Education</h2>
+              <h2 style={sectionHeadingStyle}>Education</h2>
               <button
                 onClick={handleAddEducation}
-                style={{
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '4px 10px',
-                  fontSize: 18,
-                  cursor: 'pointer',
-                  color: 'var(--color-text-primary)',
-                  lineHeight: 1,
-                }}
+                style={addBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
               >+</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -536,7 +533,7 @@ export default function Profile() {
                   <button onClick={() => handleEducationEditToggle(i)} style={iconBtnStyle}>
                     {edu.editing ? '✓' : '✏️'}
                   </button>
-                  <button onClick={() => handleDeleteEducation(i)} style={{ ...iconBtnStyle, color: '#e53e3e' }}>
+                  <button onClick={() => handleDeleteEducation(i)} style={{ ...iconBtnStyle, color: 'var(--color-danger)' }}>
                     ✕
                   </button>
                 </div>
@@ -545,26 +542,21 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Job Recommendations Section */}
+        {/* Job Recommendations */}
         {profile?.job_recommendations?.length > 0 && (
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
-            <h2 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 16,
-              fontWeight: 600,
-              color: 'var(--color-text-primary)',
-              marginBottom: 12,
-            }}>Job Recommendations</h2>
+            <h2 style={{ ...sectionHeadingStyle, marginBottom: 12 }}>Job Recommendations</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {profile.job_recommendations.map((rec, i) => (
                 <span key={i} style={{
                   padding: '4px 12px',
-                  background: 'var(--color-bg-tertiary)',
+                  background: 'var(--color-primary-light)',
                   border: '1px solid var(--color-border)',
                   borderRadius: 20,
                   fontSize: 12,
-                  color: 'var(--color-text-primary)',
+                  color: 'var(--color-primary-dark)',
                   fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
                 }}>
                   {rec.job}
                 </span>

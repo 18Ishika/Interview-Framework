@@ -52,7 +52,7 @@ const clerkAppearance = {
       fontFamily: 'var(--font-body)',
       fontSize: '15px',
       fontWeight: '600',
-      background: 'var(--color-primary)',
+      background: 'var(--color-primary-dark)',
       borderRadius: 'var(--radius-md)',
       height: '46px',
     },
@@ -62,7 +62,7 @@ const clerkAppearance = {
       color: 'var(--color-text-secondary)',
     },
     footerActionLink: {
-      color: 'var(--color-primary)',
+      color: 'var(--color-primary-dark)',
       fontWeight: '600',
     },
     footer: {
@@ -74,53 +74,10 @@ const clerkAppearance = {
 export default function signup() {
   return (
     <div className="auth-page">
-      <div className="auth-bg-blobs">
-        <div className="blob blob-1" />
-        <div className="blob blob-2" />
-        <div className="blob blob-3" />
-      </div>
-
-      <div className="auth-left">
-        <a href="/" className="auth-logo">
-          <div className="auth-logo-icon">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect width="10" height="10" rx="3" fill="white" fillOpacity="0.9" />
-              <rect x="12" width="10" height="10" rx="3" fill="white" fillOpacity="0.5" />
-              <rect y="12" width="10" height="10" rx="3" fill="white" fillOpacity="0.5" />
-              <rect x="12" y="12" width="10" height="10" rx="3" fill="white" fillOpacity="0.8" />
-            </svg>
-          </div>
-          <span className="auth-logo-text">InterviewIQ</span>
-        </a>
-
-        <div className="auth-left-content">
-          <div className="auth-tagline-badge">Free to Get Started</div>
-          <h1 className="auth-headline">
-            Land your dream job<br />
-            with <span className="auth-headline-accent">AI coaching</span>
-          </h1>
-          <p className="auth-subtext">
-            Practice interviews with intelligent, multimodal feedback. Improve your answers, posture, and confidence before the real thing.
-          </p>
-
-          <div className="auth-feature-list">
-            {[
-              { icon: '🧠', label: 'Semantic answer scoring with NLP' },
-              { icon: '👁️', label: 'Eye contact & gaze analysis' },
-              { icon: '😊', label: 'Facial expression recognition' },
-              { icon: '🧍', label: 'Posture & body language feedback' },
-              { icon: '📄', label: 'Downloadable PDF report after each session' },
-            ].map(({ icon, label }) => (
-              <div key={label} className="auth-feature-item">
-                <span className="auth-feature-icon">{icon}</span>
-                <span className="auth-feature-label">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div className="auth-right">
+        <a href="/" className="auth-brand">
+          <span className="auth-brand-text">InterviewIQ</span>
+        </a>
         <div className="auth-form-wrapper">
           <div className="auth-form-header">
             <h2 className="auth-form-title">Create your account</h2>
@@ -129,7 +86,6 @@ export default function signup() {
               <a href="/login" className="auth-link">Log in</a>
             </p>
           </div>
-
           <SignUp
             appearance={clerkAppearance}
             routing="path"

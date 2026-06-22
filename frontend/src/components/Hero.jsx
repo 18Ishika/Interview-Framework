@@ -8,22 +8,6 @@ const Hero = () => {
       textAlign: 'center',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Badge */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          background: 'var(--color-primary-light)',
-          color: 'var(--color-primary)',
-          fontSize: 12,
-          fontWeight: 600,
-          padding: '6px 16px',
-          borderRadius: 9999,
-          marginBottom: 28,
-        }}>
-          ✦ AI-powered interview assessment
-        </div>
-
         {/* Headline */}
         <h1 style={{
           fontFamily: 'var(--font-display)',
