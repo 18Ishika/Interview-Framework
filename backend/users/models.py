@@ -28,7 +28,7 @@ class User(models.Model):
         return False
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.role_type})"
+        return f"{self.first_name} {self.last_name} ({self.role})"
 
 class Skill(models.Model):
     CATEGORY_CHOICES = [
