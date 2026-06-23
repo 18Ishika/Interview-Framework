@@ -74,8 +74,7 @@ class ClerkAuthentication(BaseAuthentication):
 
 
         payload = verify_clerk_token(token)
-        print(payload)
-
+        
         clerk_user_id = payload.get("sub")
         if not clerk_user_id:
             raise AuthenticationFailed("Token missing sub claim")

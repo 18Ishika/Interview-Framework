@@ -6,5 +6,5 @@ urlpatterns = [
     path("sync/", sync_user, name="sync-user"),
     path("me/", me, name="me"),
     path("profile/", profile, name="profile"),
-    path("details/", get_profile_details, name="profile-details"),
+    path("profile-details/", get_profile_details, name="profile-details"),
 ]

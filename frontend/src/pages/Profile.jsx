@@ -24,7 +24,7 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const token = await getToken({ skipCache: true });
-        const res = await fetch(`${API_BASE}/user/details/`, {
+        const res = await fetch(`${API_BASE}/user/profile-details/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
