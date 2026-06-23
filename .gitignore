@@ -12,11 +12,12 @@
 Thumbs.db
 
 # ---- Python / Django Backend ----
-__pycache__/
+*/__pycache__/
 *.py[cod]
 *.egg-info/
 *.egg
 *.so
+*.pyc
 
 # Virtual environments
 venv/
@@ -47,7 +48,7 @@ htmlcov/
 .idea/
 
 # ---- Frontend (Node/React/Vite) ----
-node_modules/
+*/node_modules/
 dist/
 build/
 .cache/
