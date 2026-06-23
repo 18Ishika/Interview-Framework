@@ -24,11 +24,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "clerk_user_id",
+            "first_name",
+            "last_name",
+            "email",
             "role",
-            "profile_img",
-            "resume",
             "profile_img_url",
             "resume_url",
+            "resume",
+            "profile_img",
             "created_at",
             "updated_at",
         ]

@@ -74,12 +74,18 @@ class ClerkAuthentication(BaseAuthentication):
 
 
         payload = verify_clerk_token(token)
+        print(payload)
 
         clerk_user_id = payload.get("sub")
         if not clerk_user_id:
             raise AuthenticationFailed("Token missing sub claim")
 
         # Sync user to your DB
-        user, created = User.objects.get_or_create(clerk_user_id=clerk_user_id)
+        user, created = User.objects.get_or_create(clerk_user_id=clerk_user_id,defaults={"email": payload.get("email"), "first_name": payload.get("first_name"),"last_name": payload.get("last_name")})
+        if not created:
+            user.email = payload.get("email") or user.email
+            user.first_name = payload.get("first_name") or user.first_name
+            user.last_name = payload.get("last_name") or user.last_name
+            user.save()
 
         return (user, token)

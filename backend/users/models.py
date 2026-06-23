@@ -9,8 +9,8 @@ class User(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     clerk_user_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
-    first_name = models.CharField(max_length=255, blank=True)
-    last_name = models.CharField(max_length=255, blank=True)
+    first_name = models.CharField(max_length=255, null=True, blank=True)
+    last_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     profile_img_url = models.URLField(blank=True, null=True)
     resume_url = models.URLField(blank=True, null=True)
@@ -19,7 +19,6 @@ class User(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    
     @property
     def is_authenticated(self):
         return True
