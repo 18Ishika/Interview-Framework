@@ -14,7 +14,7 @@ class User(models.Model):
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     profile_img_url = models.URLField(blank=True, null=True)
     resume_url = models.URLField(blank=True, null=True)
-    role_type = models.CharField(max_length=50, choices=ROLE_CHOICES, default="candidate")
+    role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="candidate")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
