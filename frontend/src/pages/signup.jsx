@@ -71,6 +71,7 @@ const clerkAppearance = {
   },
 };
 
+
 export default function signup() {
   return (
     <div className="auth-page">
