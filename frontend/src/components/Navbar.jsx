@@ -20,6 +20,7 @@ const Logo = () => (
   </svg>
 );
 
+
 const navButtonStyle = {
   padding: '8px 20px',
   borderRadius: 'var(--radius-md)',
