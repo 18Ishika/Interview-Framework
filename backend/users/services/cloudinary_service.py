@@ -14,8 +14,9 @@ class CloudinaryService:
             )
 
             return result["secure_url"]
-        except Exception:
-            raise "Image failed to upload."
+        except Exception as e:
+            print(e)
+            raise ValueError("Image failed to upload.")
 
     @staticmethod
     def upload_resume(file):
@@ -29,4 +30,4 @@ class CloudinaryService:
 
             return result["secure_url"]
         except Exception:
-            raise "Resume failed to upload."
+            raise ValueError("Resume failed to upload.")
