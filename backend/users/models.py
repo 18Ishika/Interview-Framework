@@ -19,8 +19,6 @@ class User(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.role_type})"
     
     @property
     def is_authenticated(self):
@@ -29,6 +27,9 @@ class User(models.Model):
     @property
     def is_anonymous(self):
         return False
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.role_type})"
 
 class Skill(models.Model):
     CATEGORY_CHOICES = [

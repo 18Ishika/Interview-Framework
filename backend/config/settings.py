@@ -23,7 +23,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "users",
-    "cloudinary"
+    "cloudinary",
+    "resume",
 ]
 
 # --- Middleware ---
