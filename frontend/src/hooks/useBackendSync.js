@@ -10,7 +10,7 @@ export function useBackendSync() {
 
     const syncUser = async () => {
       try {
-        const token = await getToken({ template: "backend" });
+        const token = await getToken({ skipCache: true });
 
         const res = await fetch(`${API_BASE}/user/sync/`, {
           method: "POST",
