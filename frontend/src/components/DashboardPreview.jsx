@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const ROUNDS = [
   { step: '01', name: 'Technical Round' },
@@ -12,9 +13,10 @@ const HIGHLIGHTS = [
   { value: 'Unlimited', label: 'Practice attempts before the real interview' },
 ];
 
-function PrimaryButton({ children, style }) {
+function PrimaryButton({ children, style, onClick }) {  // ← added onClick
   return (
     <button
+      onClick={onClick}                                  // ← added
       style={{
         background: 'var(--color-primary-dark)',
         color: '#fff',
@@ -112,6 +114,8 @@ function ReportCard() {
 }
 
 const DashboardPreview = () => {
+  const navigate = useNavigate();   // ← added
+
   return (
     <section
       style={{
@@ -120,7 +124,6 @@ const DashboardPreview = () => {
       }}
     >
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        {/* Intro */}
         <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
           <div className="section-label" style={{ marginBottom: 8, justifyContent: 'center' }}>
             How candidates are assessed
@@ -149,10 +152,16 @@ const DashboardPreview = () => {
             round, and an HR personality round — scored independently and
             combined into one report.
           </p>
-          <PrimaryButton style={{ marginBottom: 40 }}>Get started free</PrimaryButton>
+
+          {/* ↓ only change here — added onClick */}
+          <PrimaryButton
+            onClick={() => navigate('/interview/preflight')}
+            style={{ marginBottom: 40 }}
+          >
+            Get started free
+          </PrimaryButton>
         </div>
 
-        {/* Rounds flow */}
         <div
           style={{
             display: 'flex',
@@ -167,7 +176,6 @@ const DashboardPreview = () => {
           <ReportCard />
         </div>
 
-        {/* Highlights */}
         <div
           style={{
             display: 'flex',
