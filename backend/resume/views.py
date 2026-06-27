@@ -32,7 +32,6 @@ class ResumeParseView(APIView):
                 CandidateSkill.objects.filter(user=user).delete()
                 Project.objects.filter(user=user).delete()
                 Education.objects.filter(user=user).delete()
-                print("Delete old records")
 
                 # 2. Save skills and associate them with the candidate (handling deduplication)
                 for skill_name in skills:
@@ -61,7 +60,6 @@ class ResumeParseView(APIView):
                             skill=skill_obj,
                             defaults={"proficiency": "beginner"}
                         )
-                print("Save skills")
 
                 # 3. Save projects
                 for proj in projects:
@@ -77,7 +75,6 @@ class ResumeParseView(APIView):
                         desc=desc
                     )
 
-                print("Save projects")
                 # 4. Save education
                 for edu_str in education:
                     edu_str = edu_str.strip()
@@ -121,7 +118,6 @@ class ResumeParseView(APIView):
                 # 5. Save recommended jobs to user
                 user.recommended_jobs = [role.get("job") for role in recommendations if role["match_percent"]>=33]
                 user.save()
-                print("Save educations")
 
             return Response({
                 "skills": skills,

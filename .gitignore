@@ -12,7 +12,7 @@
 Thumbs.db
 
 # ---- Python / Django Backend ----
-*/__pycache__/
+__pycache__
 *.py[cod]
 *.egg-info/
 *.egg

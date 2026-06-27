@@ -14,8 +14,7 @@ class CloudinaryService:
             )
 
             return result["secure_url"]
-        except Exception as e:
-            print(e)
+        except Exception:
             raise ValueError("Image failed to upload.")
 
     @staticmethod
