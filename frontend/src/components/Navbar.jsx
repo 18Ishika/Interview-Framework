@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, SignOutButton } from '@clerk/clerk-react';
 
+
 const navButtonStyle = {
   padding: '8px 20px',
   borderRadius: 'var(--radius-md)',

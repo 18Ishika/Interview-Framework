@@ -15,12 +15,14 @@ const Hero = () => {
   };
 
   return (
-    <section id="about">
-    <section style={{
-      background: 'var(--color-bg-primary)',
-      padding: '80px 40px 72px',
-      textAlign: 'center',
-    }}>
+    <section
+      id="about"
+      style={{
+        background: 'var(--color-bg-primary)',
+        padding: '80px 40px 72px',
+        textAlign: 'center',
+      }}
+    >
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         {/* Headline */}
         <h1 style={{
@@ -94,7 +96,6 @@ const Hero = () => {
           </button>
         </div>
       </div>
-    </section>
     </section>
   );
 };
