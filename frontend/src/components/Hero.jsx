@@ -49,10 +49,10 @@ const Hero = () => {
             fontFamily: 'var(--font-body)',
             transition: 'background 0.2s, transform 0.1s',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
-          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
           >
             Start a mock interview
           </button>
@@ -69,8 +69,8 @@ const Hero = () => {
             fontFamily: 'var(--font-body)',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
             See how it works
           </button>

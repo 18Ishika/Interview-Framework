@@ -7,6 +7,7 @@ const clerkAppearance = {
     rootBox: {
       width: '100%',
     },
+
     card: {
       background: 'transparent',
       border: 'none',

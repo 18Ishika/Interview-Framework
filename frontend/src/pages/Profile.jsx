@@ -24,14 +24,22 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const token = await getToken({ skipCache: true });
-        const res = await fetch(`${API_BASE}/user/profile/`, {
+        const res = await fetch(`${API_BASE}/user/profile-details/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setProfile(data);
+
+        // Map user data to profile state
+        if (data.user) {
+          setProfile({ ...data.user, job_recommendations: data.job_recommendations });
+        } else {
+          setProfile(data);
+        }
+
+        // Map array structures correctly
         if (data.skills) setSkills(data.skills);
-        if (data.projects) setProjects(data.projects);
-        if (data.education) setEducation(data.education);
+        if (data.projects) setProjects(data.projects.map(p => ({ ...p, editing: false })));
+        if (data.education) setEducation(data.education.map(e => ({ text: e, editing: false })));
       } catch (err) {
         console.error('Failed to fetch profile:', err);
       } finally {
@@ -260,10 +268,10 @@ export default function Profile() {
           }}>
             Profile Photo
           </label>
-          {profile?.photo && (
+          {profile?.profile_img_url && (
             <div style={{ marginBottom: 8 }}>
               <img
-                src={`${SERVER_BASE}${profile.photo}`}
+                src={`${profile.profile_img_url}`}
                 alt="Profile"
                 style={{
                   width: 64,
@@ -294,7 +302,7 @@ export default function Profile() {
           }}>
             Resume (PDF / DOCX)
           </label>
-          {profile?.resume && (
+          {profile?.resume_url && (
             <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               ✅ Resume uploaded
             </p>
@@ -558,7 +566,7 @@ export default function Profile() {
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
                 }}>
-                  {rec.job}
+                  {rec}
                 </span>
               ))}
             </div>
