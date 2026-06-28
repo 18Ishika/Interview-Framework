@@ -10,9 +10,12 @@ from .services.parser import extract_text_from_file
 from .services.extractor import extract_skills, extract_projects, extract_education
 from .services.recommender import recommend_jobs
 from users.models import User, Skill, CandidateSkill, Education, Project
+from users.authentication import ClerkAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 class ResumeParseView(APIView):
-
+    authentication_classes = [ClerkAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         file = request.FILES.get("resume")
         if not file:

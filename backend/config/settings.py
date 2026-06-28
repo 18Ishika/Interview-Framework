@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "cloudinary",
     "resume",
     "interview_sessions",
+    "tech_int",
 ]
 
 # --- Middleware ---
