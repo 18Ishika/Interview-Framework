@@ -1,6 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useNavigate ,Navigate } from 'react-router-dom';
-import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn , useUser} from '@clerk/clerk-react';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate ,useLocation } from 'react-router-dom';
+import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from '@clerk/clerk-react';
 import './App.css';
 import { useBackendSync } from './hooks/useBackendSync';
 import Navbar from './components/Navbar';
@@ -11,6 +11,7 @@ import DashboardPreview from './components/DashboardPreview';
 import Profile from './pages/Profile';
 import InterviewPreflight from './components/InterviewPreflight';
 import InterviewSetup from './pages/InterviewSetup';
+import InterviewSession from './pages/InterviewSession';
 import Login from './pages/login';
 import Signup from './pages/signup';
 import AppLayout from './layouts/AppLayout';
@@ -25,13 +26,9 @@ if (!PUBLISHABLE_KEY) {
 function HomePage() {
   useBackendSync();
   const { isSignedIn, isLoaded } = useUser();
-  const navigate = useNavigate();
 
-  if (!isLoaded) return null;  
-
-  if (isSignedIn) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (!isLoaded) return null;
+  if (isSignedIn) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="app">
@@ -55,9 +52,10 @@ function ProtectedRoute({ children }) {
 
 function PreflightPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   return (
     <ProtectedRoute>
-      <InterviewPreflight onBeginRealInterview={() => navigate('/')} />
+      <InterviewPreflight onBeginRealInterview={() => navigate('/interview/session', { state: location.state })} />
     </ProtectedRoute>
   );
 }
@@ -71,11 +69,18 @@ function App() {
     >
       <BrowserRouter>
         <Routes>
+          {/* Public */}
           <Route path="/" element={<HomePage />} />
           <Route path="/login/*" element={<Login />} />
           <Route path="/signup/*" element={<Signup />} />
-          <Route path="/interview/preflight" element={<PreflightPage />} />
 
+          {/* Interview flow — outside AppLayout (no sidebar) */}
+          <Route path="/interview/preflight" element={<PreflightPage />} />
+          <Route path="/interview/session" element={
+            <ProtectedRoute><InterviewSession /></ProtectedRoute>
+          } />
+
+          {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />

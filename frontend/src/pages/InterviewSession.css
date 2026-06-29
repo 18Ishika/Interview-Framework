@@ -1,0 +1,67 @@
+.is-page { max-width: 680px; margin: 0 auto; padding: 32px 20px; }
+
+.is-centered { text-align: center; padding: 40px 0; }
+.is-heading { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin-bottom: 8px; }
+.is-sub { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 28px; }
+
+.is-role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 520px; margin: 0 auto; }
+.is-role-card {
+  background: var(--color-bg-primary); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: 18px 16px; font-size: 14px; font-weight: 500;
+  color: var(--color-text-primary); cursor: pointer; font-family: var(--font-body);
+  transition: border-color 0.15s; text-align: left;
+}
+.is-role-card:hover { border-color: var(--color-primary); }
+
+.is-panel { background: var(--color-bg-primary); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: 28px 24px; box-shadow: var(--shadow-sm); }
+
+.is-progress-wrap { height: 6px; background: var(--color-bg-tertiary); border-radius: 99px; margin-bottom: 8px; overflow: hidden; }
+.is-progress-fill { height: 100%; background: var(--color-primary-dark); border-radius: 99px; transition: width 0.3s; }
+.is-progress-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 16px; }
+
+.is-badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; background: var(--color-primary-light); color: var(--color-primary-dark); padding: 4px 10px; border-radius: 99px; margin-bottom: 16px; }
+
+.is-question-box { background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; }
+.is-question-text { font-size: 16px; font-weight: 500; color: var(--color-text-primary); line-height: 1.6; margin: 0; }
+
+.is-recorder { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.is-rec-indicator { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text-secondary); }
+.is-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1s infinite; }
+
+.is-btn-record { background: var(--color-primary-dark); color: #fff; border: none; border-radius: var(--radius-md); padding: 12px 24px; font-size: 14px; font-weight: 600; font-family: var(--font-body); cursor: pointer; }
+.is-btn-stop { background: #ef4444; color: #fff; border: none; border-radius: var(--radius-md); padding: 10px 20px; font-size: 14px; font-weight: 600; font-family: var(--font-body); cursor: pointer; align-self: flex-start; }
+.is-btn-primary { background: var(--color-primary-dark); color: #fff; border: none; border-radius: var(--radius-md); padding: 11px 22px; font-size: 14px; font-weight: 600; font-family: var(--font-body); cursor: pointer; width: 100%; }
+.is-btn-ghost { background: transparent; color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; align-self: flex-start; }
+
+.is-audio-review { display: flex; flex-direction: column; gap: 10px; }
+.is-audio-actions { display: flex; gap: 10px; }
+
+.is-score-circle-wrap { display: flex; justify-content: center; margin-bottom: 24px; }
+.is-score-circle { width: 100px; height: 100px; border-radius: 50%; border: 3px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+.is-breakdown { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.is-score-row { display: flex; align-items: center; gap: 10px; }
+.is-score-label { width: 140px; font-size: 13px; color: var(--color-text-secondary); }
+.is-bar-wrap { flex: 1; height: 6px; background: var(--color-bg-tertiary); border-radius: 99px; overflow: hidden; }
+.is-bar-fill { height: 100%; background: var(--color-primary-dark); border-radius: 99px; transition: width 0.4s; }
+.is-score-pct { width: 36px; font-size: 13px; font-weight: 600; color: var(--color-text-primary); text-align: right; }
+
+.is-transcript { background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 16px; }
+.is-transcript-label { font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.is-transcript-text { font-size: 14px; color: var(--color-text-primary); line-height: 1.6; margin: 0; }
+
+.is-kw-label { font-size: 11px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+.is-kw-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.is-kw-tag { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 99px; }
+
+.is-overview-row { display: flex; gap: 12px; margin-bottom: 24px; }
+.is-overview-card { flex: 1; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px 12px; display: flex; flex-direction: column; align-items: center; }
+
+.is-result-item { background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 14px 16px; }
+.is-result-header { display: flex; align-items: center; gap: 10px; }
+.is-result-num { font-size: 12px; font-weight: 700; color: var(--color-text-muted); min-width: 24px; }
+
+.is-error-banner { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.is-error-close { background: none; border: none; cursor: pointer; color: #dc2626; font-size: 16px; }.is-question-actions { display: flex; gap: 10px; margin-bottom: 4px; }
+.is-btn-danger { background: transparent; color: var(--color-danger); border: 1px solid var(--color-danger); border-radius: var(--radius-md); padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; align-self: flex-start; }
+.is-btn-danger:hover { background: #fef2f2; }

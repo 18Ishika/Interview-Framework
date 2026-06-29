@@ -6,4 +6,5 @@ urlpatterns = [
     path('question/', views.get_question_view, name='get_question'),
     path('evaluate/', views.evaluate_answer_view, name='evaluate_answer'),
     path('results/', views.get_results_view, name='get_results'),
+    path('question-audio/', views.question_audio, name='question_audio'),
 ]
