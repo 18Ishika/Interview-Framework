@@ -3,3 +3,13 @@
   min-height: 100vh;
   background: var(--color-bg-secondary);
 }
+
+.home-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.home-content {
+  flex: 1;
+  overflow-y: auto;
+}
