@@ -24,9 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/user/", include("users.urls")),
     path("api/resume/", include("resume.urls")),
-<<<<<<< HEAD
     path("api/interview/", include("interview_sessions.urls")),
-=======
     path('api/tech-int/', include('tech_int.urls')),
->>>>>>> main
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
