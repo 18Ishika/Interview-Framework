@@ -4,7 +4,7 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .services.gemini_feedback import generate_final_feedback
+from .services.groq_feedback import generate_final_feedback
 import json
 from gtts import gTTS
 from django.http import FileResponse

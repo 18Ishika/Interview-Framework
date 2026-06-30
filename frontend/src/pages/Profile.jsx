@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
 import { API_BASE, SERVER_BASE } from '../lib/config';
 
 export default function Profile() {
   const { getToken } = useAuth();
-  const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [resume, setResume] = useState(null);
@@ -206,6 +204,14 @@ export default function Profile() {
     </div>
   );
 
+  const cardStyle = {
+    background: 'var(--color-bg-secondary)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '28px',
+    boxShadow: 'var(--shadow-md)',
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -213,36 +219,10 @@ export default function Profile() {
       fontFamily: 'var(--font-body)',
       padding: '60px 24px',
     }}>
-      <div style={{
-        maxWidth: 560,
-        margin: '0 auto',
-        background: 'var(--color-bg-secondary)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '40px',
-        boxShadow: 'var(--shadow-md)',
-      }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-text-secondary)',
-              fontSize: 13,
-              cursor: 'pointer',
-              padding: 0,
-              marginBottom: 16,
-              fontFamily: 'var(--font-body)',
-              transition: 'color 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')}
-          >
-            ← Back
-          </button>
+        <div style={{ marginBottom: 24 }}>
           <h1 style={{
             fontFamily: 'var(--font-display)',
             fontSize: 24,
@@ -257,114 +237,141 @@ export default function Profile() {
           }}>Upload your resume and photo</p>
         </div>
 
-        {/* Photo Upload */}
-        <div style={{ marginBottom: 24 }}>
-          <label style={{
-            display: 'block',
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--color-text-primary)',
-            marginBottom: 8,
-          }}>
-            Profile Photo
-          </label>
-          {profile?.profile_img_url && (
-            <div style={{ marginBottom: 8 }}>
-              <img
-                src={`${profile.profile_img_url}`}
-                alt="Profile"
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid var(--color-border)',
-                }}
+        {/* Top grid: details on left, photo on right */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 260px',
+          gap: 20,
+          alignItems: 'start',
+          marginBottom: 24,
+        }}>
+
+          {/* Left: Resume + Save */}
+          <div style={cardStyle}>
+            <h2 style={{ ...sectionHeadingStyle, marginBottom: 16 }}>Resume</h2>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--color-text-primary)',
+                marginBottom: 8,
+              }}>
+                Resume (PDF / DOCX)
+              </label>
+              {profile?.resume_url && (
+                <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                  ✅ Resume uploaded
+                </p>
+              )}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={e => setResume(e.target.files[0])}
+                style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
               />
             </div>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e => setPhoto(e.target.files[0])}
-            style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-          />
+
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              disabled={saveDisabled}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
+                color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: saveDisabled ? 'not-allowed' : 'pointer',
+                fontFamily: 'var(--font-body)',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
+              onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
+            >
+              {saving ? 'Saving...' : 'Save Profile'}
+            </button>
+
+            {/* Message */}
+            {message && (
+              <p style={{
+                marginTop: 16,
+                textAlign: 'center',
+                fontSize: 13,
+                color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
+              }}>
+                {message}
+              </p>
+            )}
+
+            {/* Parsing indicator */}
+            {parsing && (
+              <p style={{
+                marginTop: 12,
+                textAlign: 'center',
+                fontSize: 13,
+                color: 'var(--color-text-secondary)',
+              }}>
+                Extracting skills and projects from your resume...
+              </p>
+            )}
+          </div>
+
+          {/* Right: Profile Photo */}
+          <div style={{ ...cardStyle, textAlign: 'center' }}>
+            <label style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--color-text-primary)',
+              marginBottom: 16,
+            }}>
+              Profile Photo
+            </label>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              {profile?.profile_img_url ? (
+                <img
+                  src={`${profile.profile_img_url}`}
+                  alt="Profile"
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid var(--color-border)',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: '50%',
+                  background: 'var(--color-bg-tertiary)',
+                  border: '2px solid var(--color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 28,
+                  color: 'var(--color-text-muted)',
+                }}>👤</div>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={e => setPhoto(e.target.files[0])}
+              style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)', maxWidth: '100%' }}
+            />
+          </div>
         </div>
-
-        {/* Resume Upload */}
-        <div style={{ marginBottom: 32 }}>
-          <label style={{
-            display: 'block',
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--color-text-primary)',
-            marginBottom: 8,
-          }}>
-            Resume (PDF / DOCX)
-          </label>
-          {profile?.resume_url && (
-            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-              ✅ Resume uploaded
-            </p>
-          )}
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={e => setResume(e.target.files[0])}
-            style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-          />
-        </div>
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saveDisabled}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',  // was --color-primary
-            color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 15,
-            fontWeight: 600,
-            cursor: saveDisabled ? 'not-allowed' : 'pointer',
-            fontFamily: 'var(--font-body)',
-            transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
-          onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
-        >
-          {saving ? 'Saving...' : 'Save Profile'}
-        </button>
-
-        {/* Message */}
-        {message && (
-          <p style={{
-            marginTop: 16,
-            textAlign: 'center',
-            fontSize: 13,
-            color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
-          }}>
-            {message}
-          </p>
-        )}
-
-        {/* Parsing indicator */}
-        {parsing && (
-          <p style={{
-            marginTop: 12,
-            textAlign: 'center',
-            fontSize: 13,
-            color: 'var(--color-text-secondary)',
-          }}>
-            Extracting skills and projects from your resume...
-          </p>
-        )}
 
         {/* Skills Section */}
         {skills.length > 0 && (
-          <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={sectionHeadingStyle}>Skills</h2>
               <button
@@ -447,7 +454,7 @@ export default function Profile() {
 
         {/* Projects Section */}
         {projects.length > 0 && (
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={sectionHeadingStyle}>Projects</h2>
               <button
@@ -504,7 +511,7 @@ export default function Profile() {
 
         {/* Education Section */}
         {education.length > 0 && (
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={sectionHeadingStyle}>Education</h2>
               <button
@@ -552,7 +559,7 @@ export default function Profile() {
 
         {/* Job Recommendations */}
         {profile?.job_recommendations?.length > 0 && (
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--color-border)' }}>
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
             <h2 style={{ ...sectionHeadingStyle, marginBottom: 12 }}>Job Recommendations</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {profile.job_recommendations.map((rec, i) => (
