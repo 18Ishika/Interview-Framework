@@ -2,13 +2,23 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './InterviewSetup.css';
 
+const ROLES = [
+  "Backend Developer (Fresher)",
+  "Frontend Developer (Fresher)",
+  "Data Scientist (Fresher)",
+  "Software Developer (Fresher)",
+  "DevOps Engineer (Fresher)",
+];
+
 export default function InterviewSetup() {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState('technical');
+  const [selectedRole, setSelectedRole] = useState('');
   const [jd, setJd] = useState('');
 
   function handleStart() {
-    navigate('/interview/preflight', { state: { type: selectedType, jd } });
+    if (selectedType === 'technical' && !selectedRole) return;
+    navigate('/interview/preflight', { state: { type: selectedType, role: selectedRole, jd } });
   }
 
   return (
@@ -54,6 +64,25 @@ export default function InterviewSetup() {
         </div>
       </div>
 
+      {/* Role selector — only for technical */}
+      {selectedType === 'technical' && (
+        <div className="is-section">
+          <div className="is-label">Select role</div>
+          <div className="is-role-grid">
+            {ROLES.map((role) => (
+              <div
+                key={role}
+                className={`is-role-card ${selectedRole === role ? 'is-role-card--selected' : ''}`}
+                onClick={() => setSelectedRole(role)}
+              >
+                {role}
+                {selectedRole === role && <span className="is-sel-pill">Selected</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Job description */}
       <div className="is-section">
         <div className="is-label">
@@ -72,36 +101,22 @@ export default function InterviewSetup() {
         <div className="is-label">Before you begin</div>
         <div className="is-instructions">
           <div className="is-instruction-item">
-            <div className="is-instruction-icon">
-              <i className="ti ti-maximize" aria-hidden="true" />
-            </div>
+            <div className="is-instruction-icon"><i className="ti ti-maximize" /></div>
             <div>
               <div className="is-instruction-title">Full-screen mode required</div>
               <div className="is-instruction-desc">The interview runs in full screen. Exiting or switching tabs will flag a warning and may terminate the session.</div>
             </div>
           </div>
           <div className="is-instruction-item">
-            <div className="is-instruction-icon">
-              <i className="ti ti-video" aria-hidden="true" />
-            </div>
+            <div className="is-instruction-icon"><i className="ti ti-video" /></div>
             <div>
               <div className="is-instruction-title">Camera and mic must be on</div>
-              <div className="is-instruction-desc">You'll be prompted to allow access on the next screen. Make sure your devices are connected and working.</div>
+              <div className="is-instruction-desc">You'll be prompted to allow access on the next screen.</div>
             </div>
           </div>
+          
           <div className="is-instruction-item">
-            <div className="is-instruction-icon">
-              <i className="ti ti-clock" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="is-instruction-title">30-second demo first</div>
-              <div className="is-instruction-desc">A quick demo session runs before the real interview so you can check your setup. Nothing is recorded during the demo.</div>
-            </div>
-          </div>
-          <div className="is-instruction-item">
-            <div className="is-instruction-icon">
-              <i className="ti ti-forbid" aria-hidden="true" />
-            </div>
+            <div className="is-instruction-icon"><i className="ti ti-forbid" /></div>
             <div>
               <div className="is-instruction-title">No tab switching</div>
               <div className="is-instruction-desc">Leaving the interview tab during the session will be flagged automatically.</div>
@@ -110,11 +125,15 @@ export default function InterviewSetup() {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="is-actions">
         <button className="is-btn-ghost" onClick={() => navigate(-1)}>Back</button>
-        <button className="is-btn-primary" onClick={handleStart}>
-          <i className="ti ti-player-play" aria-hidden="true" />
+        <button
+          className="is-btn-primary"
+          onClick={handleStart}
+          disabled={selectedType === 'technical' && !selectedRole}
+          style={{ opacity: selectedType === 'technical' && !selectedRole ? 0.5 : 1, cursor: selectedType === 'technical' && !selectedRole ? 'not-allowed' : 'pointer' }}
+        >
+          <i className="ti ti-player-play" />
           Continue to setup
         </button>
       </div>

@@ -4,8 +4,12 @@ from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .services.gemini_feedback import generate_final_feedback
 import json
-
+from gtts import gTTS
+from django.http import FileResponse
+import io
+from django.http import HttpResponse
 from users.authentication import ClerkAuthentication
 from .services.pick import (
     start_interview,
@@ -74,9 +78,7 @@ def evaluate_answer_view(request):
         save_result(request, result)
         advance_question(request)
         next_question = get_current_question(request)
-
         return Response({
-            "result": result,
             "next_question": next_question
         })
 
@@ -94,7 +96,30 @@ def get_results_view(request):
         if not results:
             return Response({"error": "No results found"}, status=400)
 
-        return Response({"results": results})
+        report = generate_final_feedback(results)
+
+        return Response({
+            "report": report,
+            "raw_results": results 
+        })
 
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        return Response({"error": str(e)}, status=500)@api_view(['GET'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def question_audio(request):
+    questions = request.session.get('questions', [])
+    index = request.session.get('current_index', 0)
+
+    if not questions or index >= len(questions):
+        return Response({'error': 'No active question'}, status=400)
+
+    question_text = questions[index]['question']
+
+    tts = gTTS(text=question_text, lang='en', slow=False)
+    
+    audio_buffer = io.BytesIO()
+    tts.write_to_fp(audio_buffer)
+    audio_buffer.seek(0)
+
+    return HttpResponse(audio_buffer.read(), content_type='audio/mpeg')
