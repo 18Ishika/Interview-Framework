@@ -1,12 +1,13 @@
 import os
 import json
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from groq import Groq
 
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-_client = genai.Client(api_key=api_key)
+api_key = os.getenv("GROQ_API_KEY")
+_client = Groq(api_key=api_key)
+
+MODEL = "llama-3.3-70b-versatile"
 
 PROMPT_TEMPLATE = """You are a technical interview coach. Below is a list of
 interview questions, the candidate's transcribed spoken answers, and their
@@ -17,12 +18,15 @@ answered conceptually — what they got right, what was missing or shallow,
 and how to think about it better. Be honest but constructive. Do NOT mention
 specific keywords or exact terms — only explain the underlying concept.
 
-Return STRICT JSON only, no markdown, no backticks, as a JSON array in the
-same order as the input, like this:
-[
-  "2-3 line explanation for question 1",
-  "2-3 line explanation for question 2"
-]
+Return STRICT JSON only, no markdown, no backticks, as a JSON object with a
+single key "explanations" containing an array of strings in the same order
+as the input, like this:
+{{
+  "explanations": [
+    "2-3 line explanation for question 1",
+    "2-3 line explanation for question 2"
+  ]
+}}
 
 Input data:
 {data}
@@ -34,9 +38,9 @@ VERDICT_MAP = {"Correct": "Strong Answer", "Partial": "Good Attempt", "Incorrect
 def generate_final_feedback(results: list) -> dict:
     """
     Builds the final report almost entirely from local scoring data.
-    Gemini is used ONLY to generate a short conceptual explanation per
-    question — nothing else (no ratings, no summaries, no keywords) comes
-    from the LLM, keeping dependency on it minimal.
+    Groq (Llama 3.3 70B) is used ONLY to generate a short conceptual
+    explanation per question — nothing else (no ratings, no summaries,
+    no keywords) comes from the LLM, keeping dependency on it minimal.
     """
     explanations = _get_explanations(results)
 
@@ -69,23 +73,23 @@ def _get_explanations(results: list) -> list:
     prompt = PROMPT_TEMPLATE.format(data=json.dumps(trimmed, ensure_ascii=False))
 
     try:
-        response = _client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.4,
-                response_mime_type="application/json",
-            ),
+        response = _client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            response_format={"type": "json_object"},
         )
-        parsed = json.loads(response.text)
-        if isinstance(parsed, list) and len(parsed) == len(results):
-            return parsed
-        print("GEMINI WARNING: unexpected shape:", parsed)
+        parsed = json.loads(response.choices[0].message.content)
+        explanations = parsed.get("explanations") if isinstance(parsed, dict) else None
+        if isinstance(explanations, list) and len(explanations) == len(results):
+            return explanations
+        print("GROQ WARNING: unexpected shape:", parsed)
         return [_fallback_feedback(r) for r in results]
     except Exception as e:
-        print("GEMINI ERROR:", repr(e))   # <-- add this
+        print("GROQ ERROR:", repr(e))
         return [_fallback_feedback(r) for r in results]
-    
+
+
 def _fallback_feedback(r: dict) -> str:
     return f"You scored {round(r.get('final_score', 0) * 100, 1)}% on this question ({r.get('label')})."
 
