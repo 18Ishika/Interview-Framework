@@ -28,7 +28,7 @@ function RoleSelect({ onStart, loading }) {
   );
 }
 
-function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit })  {
+function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit }) {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
@@ -71,13 +71,13 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit })  {
         <p className="is-question-text">{question.question}</p>
       </div>
       <div className="is-question-actions">
-    <button className="is-btn-ghost" onClick={() => audioUrl && new Audio(audioUrl).play()}>
-        🔊 Replay Question
-    </button>
-    <button className="is-btn-danger" onClick={onExit}>
-        ✕ Exit Interview
-    </button>
-    </div>
+        <button className="is-btn-ghost" onClick={() => audioUrl && new Audio(audioUrl).play()}>
+          🔊 Replay Question
+        </button>
+        <button className="is-btn-danger" onClick={onExit}>
+          ✕ Exit Interview
+        </button>
+      </div>
       <div className="is-recorder">
         {!audioBlob && !recording && (
           <button className="is-btn-record" onClick={startRec}>🎙 Start Recording</button>
@@ -103,89 +103,73 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit })  {
     </div>
   );
 }
+function ResultsSummary({ report, onRestart }) {
+  if (!report) return null;
 
-function ScoreCard({ result, onNext }) {
-  const pct = Math.round(result.final_score * 100);
-  const color = result.label === "Correct" ? "#22c55e" : result.label === "Partial" ? "#f59e0b" : "#ef4444";
+  const ratingColor = {
+    Excellent: "#16a34a",
+    Good: "#22c55e",
+    Average: "#d97706",
+    "Needs Improvement": "#dc2626",
+  }[report.overall_rating] || "var(--color-primary-dark)";
 
-  return (
-    <div className="is-panel">
-      <div className="is-score-circle-wrap">
-        <div className="is-score-circle" style={{ borderColor: color }}>
-          <span style={{ fontSize: 28, fontWeight: 700, color }}>{pct}%</span>
-          <span style={{ fontSize: 13, color, marginTop: 2 }}>{result.label}</span>
-        </div>
-      </div>
-      <div className="is-breakdown">
-        {[["Semantic Match", result.semantic_score], ["Keyword Coverage", result.keyword_coverage], ["Length", result.length_penalty]].map(([label, val]) => (
-          <div key={label} className="is-score-row">
-            <span className="is-score-label">{label}</span>
-            <div className="is-bar-wrap"><div className="is-bar-fill" style={{ width: `${Math.round(val * 100)}%` }} /></div>
-            <span className="is-score-pct">{Math.round(val * 100)}%</span>
-          </div>
-        ))}
-      </div>
-      {result.transcript && (
-        <div className="is-transcript">
-          <p className="is-transcript-label">Your answer:</p>
-          <p className="is-transcript-text">"{result.transcript}"</p>
-        </div>
-      )}
-      {result.missed_keywords?.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <p className="is-kw-label">Keywords you missed:</p>
-          <div className="is-kw-row">
-            {result.missed_keywords.map((k) => <span key={k} className="is-kw-tag" style={{ background: "#fef2f2", color: "#ef4444" }}>{k}</span>)}
-          </div>
-        </div>
-      )}
-      {result.matched_keywords?.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <p className="is-kw-label">Keywords you got:</p>
-          <div className="is-kw-row">
-            {result.matched_keywords.map((k) => <span key={k} className="is-kw-tag" style={{ background: "#f0fdf4", color: "#16a34a" }}>{k}</span>)}
-          </div>
-        </div>
-      )}
-      <button className="is-btn-primary" onClick={onNext}>Next Question →</button>
-    </div>
-  );
-}
-
-function ResultsSummary({ results, onRestart }) {
-  const avg = results.length ? Math.round((results.reduce((s, r) => s + r.final_score, 0) / results.length) * 100) : 0;
-  const counts = results.reduce((a, r) => { a[r.label] = (a[r.label] || 0) + 1; return a; }, { Correct: 0, Partial: 0, Incorrect: 0 });
+  const verdictStyle = (verdict) => ({
+    background: verdict === "Strong Answer" ? "#f0fdf4" : verdict === "Good Attempt" ? "#fffbeb" : "#fef2f2",
+    color: verdict === "Strong Answer" ? "#16a34a" : verdict === "Good Attempt" ? "#d97706" : "#dc2626",
+  });
 
   return (
     <div className="is-panel">
       <h2 className="is-heading" style={{ textAlign: "center", marginBottom: 8 }}>Interview Complete 🎉</h2>
+
       <div className="is-overview-row">
-        {[["Overall", `${avg}%`, "var(--color-primary-dark)"], ["Correct", counts.Correct, "#16a34a"], ["Partial", counts.Partial, "#d97706"], ["Incorrect", counts.Incorrect, "#dc2626"]].map(([label, val, color]) => (
-          <div key={label} className="is-overview-card">
-            <span style={{ fontSize: 26, fontWeight: 700, color }}>{val}</span>
-            <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>{label}</span>
-          </div>
-        ))}
+        <div className="is-overview-card">
+          <span style={{ fontSize: 22, fontWeight: 700, color: ratingColor }}>{report.overall_rating}</span>
+          <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>Overall Rating</span>
+        </div>
       </div>
+
+      <div className="is-transcript" style={{ marginBottom: 24 }}>
+        <p className="is-transcript-label">Summary</p>
+        <p className="is-transcript-text">{report.overall_summary}</p>
+      </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-        {results.map((r, i) => (
+        {report.per_question_feedback?.map((q, i) => (
           <div key={i} className="is-result-item">
             <div className="is-result-header">
               <span className="is-result-num">Q{i + 1}</span>
-              <span style={{ flex: 1, fontSize: 13, color: "var(--color-text-secondary)" }}>{r.topic} · {r.concept}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, padding: "2px 10px", borderRadius: 99, background: r.label === "Correct" ? "#f0fdf4" : r.label === "Partial" ? "#fffbeb" : "#fef2f2", color: r.label === "Correct" ? "#16a34a" : r.label === "Partial" ? "#d97706" : "#dc2626" }}>{r.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", minWidth: 36, textAlign: "right" }}>{Math.round(r.final_score * 100)}%</span>
+              <span style={{ flex: 1, fontSize: 13, color: "var(--color-text-secondary)" }}>{q.question}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, padding: "2px 10px", borderRadius: 99, ...verdictStyle(q.verdict) }}>
+                {q.verdict}
+              </span>
             </div>
-            <p style={{ fontSize: 13, color: "var(--color-text-primary)", marginTop: 6, marginBottom: 0 }}>{r.question}</p>
-            {r.transcript && <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4, marginBottom: 0 }}>Your answer: "{r.transcript}"</p>}
+            <p style={{ fontSize: 13, color: "var(--color-text-primary)", marginTop: 6, marginBottom: 8 }}>{q.feedback}</p>
+
+            {q.matched_keywords?.length > 0 && (
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "var(--color-text-secondary)", marginRight: 6 }}>Got:</span>
+                {q.matched_keywords.map((k) => (
+                  <span key={k} className="is-kw-tag" style={{ background: "#f0fdf4", color: "#16a34a", marginRight: 4 }}>{k}</span>
+                ))}
+              </div>
+            )}
+            {q.missed_keywords?.length > 0 && (
+              <div>
+                <span style={{ fontSize: 11, color: "var(--color-text-secondary)", marginRight: 6 }}>Missed:</span>
+                {q.missed_keywords.map((k) => (
+                  <span key={k} className="is-kw-tag" style={{ background: "#fef2f2", color: "#ef4444", marginRight: 4 }}>{k}</span>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
+
       <button className="is-btn-primary" onClick={onRestart}>Start New Interview</button>
     </div>
   );
 }
-
 export default function InterviewSession() {
   const { getToken } = useAuth();
   const navigate = useNavigate();
@@ -194,8 +178,8 @@ export default function InterviewSession() {
   const [phase, setPhase] = useState("select");
   const [question, setQuestion] = useState(null);
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
-  const [lastResult, setLastResult] = useState(null);
-  const [results, setResults] = useState([]);
+  const [report, setReport] = useState(null);
+  const [rawResults, setRawResults] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -227,21 +211,20 @@ export default function InterviewSession() {
     setLoading(true); setError(null);
     try {
       const data = await evaluateAnswer(audioBlob, getToken);
-      setLastResult(data.result);
       if (data.next_question?.round_complete) {
         const res = await getResults(getToken);
-        setResults(res.results);
+        setReport(res.report);
+        setRawResults(res.raw_results || []);
         setPhase("results");
       } else {
         setQuestion(data.next_question);
-        setPhase("scoring");
+        playQuestionAudio();
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
-  const handleNext = () => { setLastResult(null); setPhase("question"); playQuestionAudio(); };
-  const handleRestart = () => { setPhase("select"); setQuestion(null); setLastResult(null); setResults([]); setError(null); };
+  const handleRestart = () => { setPhase("select"); setQuestion(null); setReport(null); setRawResults([]); setError(null); };
 
   return (
     <div className="is-page">
@@ -252,9 +235,17 @@ export default function InterviewSession() {
         </div>
       )}
       {phase === "select" && <RoleSelect onStart={handleStart} loading={loading} />}
-      {phase === "question" && question && <QuestionPanel question={question} onSubmit={handleSubmit} loading={loading} audioUrl={questionAudioUrl} onExit={() => navigate('/interview')} />}
-      {phase === "scoring" && lastResult && <ScoreCard result={lastResult} onNext={handleNext} />}
-      {phase === "results" && <ResultsSummary results={results} onRestart={handleRestart} />}
+      {phase === "question" && question && (
+      <QuestionPanel
+        key={question.question_number}
+        question={question}
+        onSubmit={handleSubmit}
+        loading={loading}
+        audioUrl={questionAudioUrl}
+        onExit={() => navigate('/interview')}
+      />
+    )}
+      {phase === "results" && <ResultsSummary report={report} rawResults={rawResults} onRestart={handleRestart} />}
     </div>
   );
 }
