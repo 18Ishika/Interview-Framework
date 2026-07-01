@@ -4,30 +4,6 @@ import { useAuth } from "@clerk/clerk-react";
 import { startInterview, evaluateAnswer, getResults, fetchQuestionAudio } from "../api/interviewApi";
 import "./InterviewSession.css";
 
-const ROLES = [
-  "Backend Developer (Fresher)",
-  "Frontend Developer (Fresher)",
-  "Data Scientist (Fresher)",
-  "Software Developer (Fresher)",
-  "DevOps Engineer (Fresher)",
-];
-
-function RoleSelect({ onStart, loading }) {
-  return (
-    <div className="is-centered">
-      <h2 className="is-heading">Choose your role</h2>
-      <p className="is-sub">Pick the role you want to be interviewed for.</p>
-      <div className="is-role-grid">
-        {ROLES.map((role) => (
-          <button key={role} className="is-role-card" onClick={() => onStart(role)} disabled={loading}>
-            {loading ? "Starting…" : role}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit }) {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
@@ -175,7 +151,7 @@ export default function InterviewSession() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [phase, setPhase] = useState("select");
+  const [phase, setPhase] = useState(location.state?.role ? "loading" : "redirecting");
   const [question, setQuestion] = useState(null);
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
   const [report, setReport] = useState(null);
@@ -204,7 +180,11 @@ export default function InterviewSession() {
 
   useEffect(() => {
     const role = location.state?.role;
-    if (role) handleStart(role);
+    if (role) {
+      handleStart(role);
+    } else {
+      navigate('/interview/setup', { replace: true });
+    }
   }, []); // eslint-disable-line
 
   const handleSubmit = async (audioBlob) => {
@@ -224,7 +204,7 @@ export default function InterviewSession() {
     finally { setLoading(false); }
   };
 
-  const handleRestart = () => { setPhase("select"); setQuestion(null); setReport(null); setRawResults([]); setError(null); };
+  const handleRestart = () => { navigate('/interview/setup'); };
 
   return (
     <div className="is-page">
@@ -234,7 +214,12 @@ export default function InterviewSession() {
           <button onClick={() => setError(null)} className="is-error-close">✕</button>
         </div>
       )}
-      {phase === "select" && <RoleSelect onStart={handleStart} loading={loading} />}
+      {(phase === "loading" || phase === "redirecting") && (
+        <div className="is-centered">
+          <h2 className="is-heading">Starting your interview…</h2>
+          <p className="is-sub">Setting things up, this'll just take a moment.</p>
+        </div>
+      )}
       {phase === "question" && question && (
       <QuestionPanel
         key={question.question_number}
