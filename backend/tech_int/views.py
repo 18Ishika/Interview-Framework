@@ -11,6 +11,9 @@ from django.http import FileResponse
 import io
 from django.http import HttpResponse
 from users.authentication import ClerkAuthentication
+from interview_sessions.models import Session, TechnicalRound
+from django.utils import timezone
+import uuid
 from .services.pick import (
     start_interview,
     get_current_question,
@@ -29,11 +32,32 @@ from .services.scoring import score_answer
 def start_interview_view(request):
     try:
         role_name = request.data.get("role")
+        session_id = request.data.get("session_id")
 
         if not role_name:
             return Response({"error": "Role is required"}, status=400)
 
+        if not session_id:
+            session_id = uuid.uuid4()
+            
+        # Get or create the session
+        interview_session, _ = Session.objects.get_or_create(
+            id=session_id,
+            defaults={"user": request.user, "target_role": role_name}
+        )
+        interview_session.tech_status = "in_progress"
+        interview_session.save()
+
+        # Get or create the technical round
+        tech_round, _ = TechnicalRound.objects.get_or_create(session=interview_session)
+        if not tech_round.started_at:
+            tech_round.started_at = timezone.now()
+        tech_round.save()
+
+        request.session['session_id'] = str(session_id)
+
         question = start_interview(request, role_name)
+        question["session_id"] = str(session_id)
         return Response(question)
 
     except Exception as e:
@@ -76,6 +100,16 @@ def evaluate_answer_view(request):
         result["transcript"] = transcript
 
         save_result(request, result)
+
+        session_id = request.session.get('session_id')
+        if session_id:
+            try:
+                tech_round = TechnicalRound.objects.get(session__id=session_id)
+                tech_round.questions_asked = request.session.get('results', [])
+                tech_round.save()
+            except Exception as e:
+                print("Error saving incremental results:", e)
+
         advance_question(request)
         next_question = get_current_question(request)
         return Response({
@@ -97,6 +131,22 @@ def get_results_view(request):
             return Response({"error": "No results found"}, status=400)
 
         report = generate_final_feedback(results)
+
+        session_id = request.session.get('session_id')
+        if session_id:
+            try:
+                interview_session = Session.objects.get(id=session_id)
+                tech_round = TechnicalRound.objects.get(session=interview_session)
+                
+                tech_round.questions_asked = results
+                tech_round.ai_evaluation = report
+                tech_round.submitted_at = timezone.now()
+                tech_round.save()
+                
+                interview_session.tech_status = "completed"
+                interview_session.save()
+            except Exception as e:
+                print("Error finalizing results in db:", e)
 
         return Response({
             "report": report,

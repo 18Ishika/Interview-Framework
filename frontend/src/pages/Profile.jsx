@@ -573,7 +573,7 @@ export default function Profile() {
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
                 }}>
-                  {rec}
+                  {rec.job}
                 </span>
               ))}
             </div>
