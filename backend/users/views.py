@@ -128,5 +128,5 @@ def get_profile_details(request):
         "experience": experience_data,
         "projects": project_data,
         "skills": skills_data,
-        "job_recommendations": user.recommended_jobs or []
+        "job_recommendations": [{"job":job} for job in user.recommended_jobs] or []
     }, status=status.HTTP_200_OK)
