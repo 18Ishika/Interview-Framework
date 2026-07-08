@@ -14,6 +14,7 @@ from users.authentication import ClerkAuthentication
 from interview_sessions.models import Session, TechnicalRound
 from django.utils import timezone
 import uuid
+from interview_sessions.services.cloudinary_service import CloudinaryService
 from .services.pick import (
     start_interview,
     get_current_question,
@@ -105,10 +106,23 @@ def evaluate_answer_view(request):
         if session_id:
             try:
                 tech_round = TechnicalRound.objects.get(session__id=session_id)
+                
+                # Rewind the file pointer after transcription read it
+                audio_file.seek(0)
+                audio_url = CloudinaryService.upload_audio(audio_file, request.user.id, session_id, "technical")
+                
+                # Append the url to audio_recording
+                if not isinstance(tech_round.audio_recording, list):
+                    tech_round.audio_recording = []
+                tech_round.audio_recording.append(audio_url)
+                
+                # Save the URL into the result object itself just in case it's needed for the frontend
+                request.session['results'][-1]["audio_url"] = audio_url
+
                 tech_round.questions_asked = request.session.get('results', [])
                 tech_round.save()
             except Exception as e:
-                print("Error saving incremental results:", e)
+                print("Error saving incremental results or uploading audio:", e)
 
         advance_question(request)
         next_question = get_current_question(request)
