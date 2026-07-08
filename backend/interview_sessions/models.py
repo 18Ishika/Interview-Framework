@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from users.models import User
 
 class Session(models.Model):
@@ -42,7 +43,7 @@ class TechnicalRound(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="technical_round")
     video_recording = models.URLField(null=True, blank=True)
-    audio_recording = models.URLField(null=True, blank=True)
+    audio_recording = ArrayField(models.URLField(), default=list, blank=True)
     generated_prompt = models.TextField(null=True, blank=True)
     questions_asked = models.JSONField(default=list, blank=True)
     ai_evaluation = models.JSONField(default=dict, blank=True)
@@ -56,7 +57,7 @@ class HrRound(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="hr_round")
     video_recording = models.URLField(null=True, blank=True)
-    audio_recording = models.URLField(null=True, blank=True)
+    audio_recording = ArrayField(models.URLField(), default=list, blank=True)
     transcripts = models.TextField(null=True, blank=True)
     posture_metric = models.JSONField(default=dict, blank=True)
     eye_contact_metrics = models.JSONField(default=dict, blank=True)

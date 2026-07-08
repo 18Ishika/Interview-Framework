@@ -53,14 +53,17 @@ class TechnicalRoundUploadView(APIView):
 
         try:
             if video_file:
-                video_url = CloudinaryService.upload_video(video_file, session_id, "technical")
+                video_url = CloudinaryService.upload_video(video_file, session.user.id, session_id, "technical")
                 tech_round.video_recording = video_url
                 uploaded["video_url"] = video_url
 
             if audio_file:
-                audio_url = CloudinaryService.upload_audio(audio_file, session_id, "technical")
-                tech_round.audio_recording = audio_url
+                audio_url = CloudinaryService.upload_audio(audio_file, session.user.id, session_id, "technical")
+                if not isinstance(tech_round.audio_recording, list):
+                    tech_round.audio_recording = []
+                tech_round.audio_recording.append(audio_url)
                 uploaded["audio_url"] = audio_url
+                print("="*10,"\n",uploaded["audio_url"])
 
             tech_round.save()
 
@@ -126,13 +129,15 @@ class HrRoundUploadView(APIView):
 
         try:
             if video_file:
-                video_url = CloudinaryService.upload_video(video_file, session_id, "hr")
+                video_url = CloudinaryService.upload_video(video_file, session.user.id, session_id, "hr")
                 hr_round.video_recording = video_url
                 uploaded["video_url"] = video_url
 
             if audio_file:
-                audio_url = CloudinaryService.upload_audio(audio_file, session_id, "hr")
-                hr_round.audio_recording = audio_url
+                audio_url = CloudinaryService.upload_audio(audio_file, session.user.id, session_id, "hr")
+                if not isinstance(hr_round.audio_recording, list):
+                    hr_round.audio_recording = []
+                hr_round.audio_recording.append(audio_url)
                 uploaded["audio_url"] = audio_url
 
             hr_round.save()
