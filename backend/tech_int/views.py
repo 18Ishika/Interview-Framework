@@ -5,6 +5,8 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .services.groq_feedback import generate_final_feedback
+import tempfile, os
+from .tasks import evaluate_answer_task
 import json
 from gtts import gTTS
 from django.http import FileResponse
@@ -76,14 +78,12 @@ def get_question_view(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
-
 @api_view(["POST"])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
 def evaluate_answer_view(request):
     try:
         audio_file = request.FILES.get("audio")
-
         if not audio_file:
             return Response({"error": "Audio file is required"}, status=400)
 
@@ -91,48 +91,30 @@ def evaluate_answer_view(request):
         if not answer_data:
             return Response({"error": "No active question found"}, status=400)
 
-        transcript = transcribe(audio_file)
+        session_key = request.session.session_key
+        current_index = request.session.get('current_index', 0)
 
-        result = score_answer(
-            candidate=transcript,
-            reference=answer_data["answer"],
-            forced_keywords=answer_data["keywords"]
+        # write audio to a temp file the worker process can access
+        fd, audio_path = tempfile.mkstemp(suffix=".webm")
+        with os.fdopen(fd, "wb") as f:
+            for chunk in audio_file.chunks():
+                f.write(chunk)
+
+        evaluate_answer_task.delay(
+            session_key,
+            current_index,
+            audio_path,
+            answer_data["answer"],
+            answer_data["keywords"],
+            request.user.id,
         )
-        result["transcript"] = transcript
-
-        save_result(request, result)
-
-        session_id = request.session.get('session_id')
-        if session_id:
-            try:
-                tech_round = TechnicalRound.objects.get(session__id=session_id)
-                
-                # Rewind the file pointer after transcription read it
-                audio_file.seek(0)
-                audio_url = CloudinaryService.upload_audio(audio_file, request.user.id, session_id, "technical")
-                
-                # Append the url to audio_recording
-                if not isinstance(tech_round.audio_recording, list):
-                    tech_round.audio_recording = []
-                tech_round.audio_recording.append(audio_url)
-                
-                # Save the URL into the result object itself just in case it's needed for the frontend
-                request.session['results'][-1]["audio_url"] = audio_url
-
-                tech_round.questions_asked = request.session.get('results', [])
-                tech_round.save()
-            except Exception as e:
-                print("Error saving incremental results or uploading audio:", e)
 
         advance_question(request)
         next_question = get_current_question(request)
-        return Response({
-            "next_question": next_question
-        })
+        return Response({"next_question": next_question})
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
 
 @api_view(["GET"])
 @authentication_classes([ClerkAuthentication])

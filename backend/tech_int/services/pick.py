@@ -83,7 +83,7 @@ def get_current_answer_data(request) -> dict:
         'keywords': current['keywords']
     }
 
-
+### dead code...
 def save_result(request, result: dict):
     results = request.session.get('results', [])
     questions = request.session.get('questions', [])
