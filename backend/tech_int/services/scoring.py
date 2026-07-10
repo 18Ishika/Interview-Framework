@@ -5,7 +5,7 @@ from sentence_transformers import SentenceTransformer, CrossEncoder, util
 nlp = spacy.load("en_core_web_sm")
 st_model = SentenceTransformer("all-MiniLM-L6-v2")
 nli_model = CrossEncoder("cross-encoder/nli-deberta-v3-base")
-
+st_util = util
 
 def extract_technical_keywords(text: str) -> set:
     doc = nlp(text.lower())
@@ -33,7 +33,7 @@ def check_contradiction(candidate: str, reference: str) -> float:
 def score_answer(candidate: str, reference: str, forced_keywords: list = []) -> dict:
     # Component 1: semantic similarity
     embeddings = st_model.encode([candidate, reference])
-    semantic = util.cos_sim(embeddings[0], embeddings[1]).item()
+    semantic = st_util.cos_sim(embeddings[0], embeddings[1]).item()
 
     # Component 2: keyword coverage
     if forced_keywords:

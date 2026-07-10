@@ -35,6 +35,7 @@ class CodingRound(models.Model):
     total_score = models.FloatField(default=0.0)
     started_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    is_result_acknowledged = models.BooleanField(default=False)
 
     def __str__(self):
         return f"CodingRound {self.id} for Session {self.session.id}"
@@ -49,6 +50,7 @@ class TechnicalRound(models.Model):
     ai_evaluation = models.JSONField(default=dict, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    is_result_acknowledged = models.BooleanField(default=False)
 
     def __str__(self):
         return f"TechnicalRound {self.id} for Session {self.session.id}"
@@ -65,6 +67,7 @@ class HrRound(models.Model):
     qna_metrics = models.JSONField(default=dict, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+    is_result_acknowledged = models.BooleanField(default=False)
 
     def __str__(self):
         return f"HrRound {self.id} for Session {self.session.id}"

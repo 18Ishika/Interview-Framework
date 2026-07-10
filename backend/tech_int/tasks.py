@@ -71,12 +71,26 @@ def finalize_evaluation_chord_task(self, results, session_id):
 
         tech_round.ai_evaluation = report
         tech_round.questions_asked = valid_results
+        tech_round.is_result_acknowledged = False
         tech_round.save()
 
         interview_session.tech_status = "completed"
         interview_session.save()
         print(f"[Celery] Saved TechnicalRound and marked Session {session_id} as completed.")
         
+        try:
+            from interview_sessions.services.notifier import NotificationService
+            NotificationService.notify_user_evaluation_complete(
+                user_id=interview_session.user.clerk_user_id,
+                round_type="technical",
+                result_data={
+                    "session_id": session_id,
+                    "status": "completed"
+                }
+            )
+        except Exception as notify_e:
+            print(f"[Celery] NotificationService failed: {notify_e}")
+
         return report
     except Exception as e:
         print(f"[Celery] finalize_evaluation_chord_task failed for Session {session_id}:", e)

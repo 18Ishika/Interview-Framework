@@ -145,6 +145,15 @@ def get_results_view(request):
             tech_round = TechnicalRound.objects.get(session_id=session_id_str)
         except TechnicalRound.DoesNotExist:
             return Response({"error": "Technical round not found"}, status=400)
+
+        # If already completed, just return the report!
+        if tech_round.session.tech_status == "completed":
+            return Response({
+                "message": "Evaluation completed",
+                "status": "completed",
+                "report": tech_round.ai_evaluation,
+                "raw_results": tech_round.questions_asked
+            })
         
         questions_asked = tech_round.questions_asked
         if not questions_asked:
@@ -191,6 +200,25 @@ def get_results_view(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
+@api_view(["GET"])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_interview_status(request):
+    try:
+        session_id_str = request.session.get('session_id')
+        if not session_id_str:
+            return Response({"error": "No active session"}, status=400)
+            
+        interview_session = Session.objects.get(id=session_id_str)
+        return Response({
+            "status": interview_session.tech_status,
+            "session_id": str(interview_session.id)
+        })
+    except Session.DoesNotExist:
+        return Response({"error": "Session not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
 @api_view(['GET'])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
@@ -210,3 +238,50 @@ def question_audio(request):
     audio_buffer.seek(0)
 
     return HttpResponse(audio_buffer.read(), content_type='audio/mpeg')
+
+@api_view(['POST'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def acknowledge_result_view(request):
+    try:
+        session_id = request.data.get("session_id")
+        round_type = request.data.get("round_type", "technical")
+        
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=400)
+            
+        session = Session.objects.get(id=session_id, user=request.user)
+        
+        if round_type == "technical":
+            tech_round = session.technical_round
+            tech_round.is_result_acknowledged = True
+            tech_round.save()
+            return Response({"message": "Technical round acknowledged."})
+            
+        return Response({"error": "Invalid round_type"}, status=400)
+    except Session.DoesNotExist:
+        return Response({"error": "Session not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_pending_notifications_view(request):
+    try:
+        sessions = Session.objects.filter(user=request.user)
+        pending = []
+        
+        for session in sessions:
+            if hasattr(session, 'technical_round'):
+                tech_round = session.technical_round
+                if tech_round.ai_evaluation and not tech_round.is_result_acknowledged:
+                    pending.append({
+                        "session_id": str(session.id),
+                        "round_type": "technical",
+                        "status": "completed"
+                    })
+        
+        return Response({"pending": pending})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

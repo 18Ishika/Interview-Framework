@@ -15,8 +15,9 @@ def patched_load_audio(file, sr=16000):
     return np.frombuffer(out, np.int16).flatten().astype(np.float32) / 32768.0
 
 whisper.audio.load_audio = patched_load_audio
-model = whisper.load_model("small")
 
+# Load model eagerly at module level
+model = whisper.load_model("small")
 
 def transcribe(audio_path: str) -> str:
     result = model.transcribe(audio_path)
