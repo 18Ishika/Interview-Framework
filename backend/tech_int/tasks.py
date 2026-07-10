@@ -1,54 +1,97 @@
 # tech_interview/tasks.py
 import os
-from celery import shared_task
-from django.contrib.sessions.backends.db import SessionStore
+import tempfile
+import urllib.request
+from celery import shared_task, chord
+from django.utils import timezone
+from interview_sessions.models import TechnicalRound, Session
 from .services.transcription import transcribe
 from .services.scoring import score_answer
-from interview_sessions.models import TechnicalRound
-from interview_sessions.services.cloudinary_service import CloudinaryService
+from .services.groq_feedback import generate_final_feedback
 
 
 @shared_task(bind=True, max_retries=2)
-def evaluate_answer_task(self, session_key, question_index, audio_path, reference, forced_keywords, user_id):
-    session = SessionStore(session_key=session_key)
-
+def evaluate_single_answer_task(self, audio_url, transcript_reference, forced_keywords, question_context):
+    temp_audio_path = None
+    question_text = question_context.get("question", "Unknown Question")
+    print(f"[Celery] Starting evaluation task for question: '{question_text}'")
     try:
-        transcript = transcribe(audio_path) 
+        # Download the audio file to a temp file
+        fd, temp_audio_path = tempfile.mkstemp(suffix=".webm")
+        os.close(fd)
+        
+        print(f"[Celery] Downloading audio from: {audio_url}")
+        req = urllib.request.Request(audio_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response, open(temp_audio_path, 'wb') as out_file:
+            out_file.write(response.read())
+        print(f"[Celery] Audio downloaded successfully to {temp_audio_path}")
 
+        print("[Celery] Starting transcription...")
+        transcript = transcribe(temp_audio_path) 
+        print(f"[Celery] Transcription complete: '{transcript}'")
+
+        print("[Celery] Starting scoring...")
         result = score_answer(
             candidate=transcript,
-            reference=reference,
+            reference=transcript_reference,
             forced_keywords=forced_keywords,
         )
+        print(f"[Celery] Scoring complete. Score: {result.get('score', 0)}")
+        
         result["transcript"] = transcript
+        result["audio_url"] = audio_url
+        result["reference"] = transcript_reference
+        result["keywords"] = forced_keywords
+        result["status"] = "evaluated"
+        result.update(question_context)
 
-        questions = session.get('questions', [])
-        result['question'] = questions[question_index]['question']
-        result['topic'] = questions[question_index]['topic']
-        result['concept'] = questions[question_index]['concept']
-
-        session_id = session.get('session_id')
-        audio_url = CloudinaryService.upload_audio(audio_path, user_id, session_id, "technical")
-        result['audio_url'] = audio_url
-
-        results = session.get('results', [])
-        results.append(result)
-        session['results'] = results
-        session.save()
-
-        try:
-            tech_round = TechnicalRound.objects.get(session__id=session_id)
-            if not isinstance(tech_round.audio_recording, list):
-                tech_round.audio_recording = []
-            tech_round.audio_recording.append(audio_url)
-            tech_round.questions_asked = results
-            tech_round.save()
-        except TechnicalRound.DoesNotExist:
-            pass
-
+        return result
     except Exception as e:
-        print("evaluate_answer_task failed:", e)
+        print(f"[Celery] evaluate_single_answer_task failed for '{question_text}':", e)
         raise
     finally:
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        if temp_audio_path and os.path.exists(temp_audio_path):
+            os.remove(temp_audio_path)
+            print(f"[Celery] Cleaned up temporary audio file: {temp_audio_path}")
+
+
+@shared_task(bind=True, max_retries=2)
+def finalize_evaluation_chord_task(self, results, session_id):
+    print(f"[Celery] Callback triggered: finalize_evaluation_chord_task for Session ID: {session_id}")
+    try:
+        tech_round = TechnicalRound.objects.get(session__id=session_id)
+        interview_session = tech_round.session
+
+        valid_results = [res for res in results if isinstance(res, dict) and "final_score" in res]
+        print(f"[Celery] Received {len(results)} results from parallel tasks. {len(valid_results)} are valid.")
+
+        print("[Celery] Generating final report using Groq...")
+        report = generate_final_feedback(valid_results)
+        print("[Celery] Report generated successfully.")
+
+        tech_round.ai_evaluation = report
+        tech_round.questions_asked = valid_results
+        tech_round.is_result_acknowledged = False
+        tech_round.save()
+
+        interview_session.tech_status = "completed"
+        interview_session.save()
+        print(f"[Celery] Saved TechnicalRound and marked Session {session_id} as completed.")
+        
+        try:
+            from interview_sessions.services.notifier import NotificationService
+            NotificationService.notify_user_evaluation_complete(
+                user_id=interview_session.user.clerk_user_id,
+                round_type="technical",
+                result_data={
+                    "session_id": session_id,
+                    "status": "completed"
+                }
+            )
+        except Exception as notify_e:
+            print(f"[Celery] NotificationService failed: {notify_e}")
+
+        return report
+    except Exception as e:
+        print(f"[Celery] finalize_evaluation_chord_task failed for Session {session_id}:", e)
+        raise

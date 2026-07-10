@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import InterviewPreflight from './components/InterviewPreflight';
 import InterviewSetup from './pages/InterviewSetup';
 import InterviewSession from './pages/InterviewSession';
+import InterviewResults from './pages/InterviewResults';
 import Login from './pages/login';
 import Signup from './pages/signup';
 import AppLayout from './layouts/AppLayout';
@@ -78,6 +79,9 @@ function App() {
           <Route path="/interview/preflight" element={<PreflightPage />} />
           <Route path="/interview/session" element={
             <ProtectedRoute><InterviewSession /></ProtectedRoute>
+          } />
+          <Route path="/interview/results" element={
+            <ProtectedRoute><InterviewResults /></ProtectedRoute>
           } />
 
           {/* App shell with sidebar */}

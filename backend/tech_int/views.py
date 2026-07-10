@@ -6,7 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .services.groq_feedback import generate_final_feedback
 import tempfile, os
-from .tasks import evaluate_answer_task
+from celery import chord
+from .tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
 import json
 from gtts import gTTS
 from django.http import FileResponse
@@ -91,23 +92,38 @@ def evaluate_answer_view(request):
         if not answer_data:
             return Response({"error": "No active question found"}, status=400)
 
-        session_key = request.session.session_key
-        current_index = request.session.get('current_index', 0)
+        session_id_str = request.session.get('session_id')
+        if not session_id_str:
+            return Response({"error": "No session active"}, status=400)
 
-        # write audio to a temp file the worker process can access
-        fd, audio_path = tempfile.mkstemp(suffix=".webm")
-        with os.fdopen(fd, "wb") as f:
-            for chunk in audio_file.chunks():
-                f.write(chunk)
+        current_question = get_current_question(request)
+        
+        # Upload audio to Cloudinary directly
+        audio_url = CloudinaryService.upload_audio(audio_file, request.user.id, session_id_str, "technical")
 
-        evaluate_answer_task.delay(
-            session_key,
-            current_index,
-            audio_path,
-            answer_data["answer"],
-            answer_data["keywords"],
-            request.user.id,
-        )
+        try:
+            tech_round, _ = TechnicalRound.objects.get_or_create(session_id=session_id_str)
+            if not isinstance(tech_round.questions_asked, list):
+                tech_round.questions_asked = []
+            
+            # Append to the ArrayField for record keeping
+            if not isinstance(tech_round.audio_recording, list):
+                tech_round.audio_recording = []
+            tech_round.audio_recording.append(audio_url)
+
+            # Store initial data for evaluation later
+            tech_round.questions_asked.append({
+                "question": current_question.get('question'),
+                "topic": current_question.get('topic'),
+                "concept": current_question.get('concept'),
+                "audio_url": audio_url,
+                "reference": answer_data["answer"],
+                "keywords": answer_data["keywords"],
+                "status": "pending_evaluation"
+            })
+            tech_round.save()
+        except Exception as e:
+            print("Error updating TechnicalRound with audio question context:", e)
 
         advance_question(request)
         next_question = get_current_question(request)
@@ -121,36 +137,89 @@ def evaluate_answer_view(request):
 @permission_classes([IsAuthenticated])
 def get_results_view(request):
     try:
-        results = get_all_results(request)
+        session_id_str = request.session.get('session_id')
+        if not session_id_str:
+            return Response({"error": "No active session"}, status=400)
 
-        if not results:
-            return Response({"error": "No results found"}, status=400)
+        try:
+            tech_round = TechnicalRound.objects.get(session_id=session_id_str)
+        except TechnicalRound.DoesNotExist:
+            return Response({"error": "Technical round not found"}, status=400)
 
-        report = generate_final_feedback(results)
+        # If already completed, just return the report!
+        if tech_round.session.tech_status == "completed":
+            return Response({
+                "message": "Evaluation completed",
+                "status": "completed",
+                "report": tech_round.ai_evaluation,
+                "raw_results": tech_round.questions_asked
+            })
+        
+        questions_asked = tech_round.questions_asked
+        if not questions_asked:
+            return Response({"error": "No questions to evaluate"}, status=400)
 
-        session_id = request.session.get('session_id')
-        if session_id:
-            try:
-                interview_session = Session.objects.get(id=session_id)
-                tech_round = TechnicalRound.objects.get(session=interview_session)
-                
-                tech_round.questions_asked = results
-                tech_round.ai_evaluation = report
-                tech_round.submitted_at = timezone.now()
-                tech_round.save()
-                
-                interview_session.tech_status = "completed"
-                interview_session.save()
-            except Exception as e:
-                print("Error finalizing results in db:", e)
+        eval_tasks = []
+        for q in questions_asked:
+            if not isinstance(q, dict) or not q.get("audio_url"):
+                continue
+            question_context = {
+                "question": q.get("question"),
+                "topic": q.get("topic"),
+                "concept": q.get("concept")
+            }
+            eval_tasks.append(
+                evaluate_single_answer_task.s(
+                    audio_url=q.get("audio_url"),
+                    transcript_reference=q.get("reference"),
+                    forced_keywords=q.get("keywords", []),
+                    question_context=question_context
+                )
+            )
+
+        if not eval_tasks:
+            return Response({"error": "No valid audio recordings found to evaluate"}, status=400)
+
+        print("Eval task started.")
+        callback_task = finalize_evaluation_chord_task.s(session_id=session_id_str)
+        print("Callback task created.")
+        
+        # Trigger the chord
+        chord(eval_tasks)(callback_task)
+        print("Eval task completed.")
+
+        # Update submitted_at since the user has finished the interview
+        tech_round.submitted_at = timezone.now()
+        tech_round.save()
 
         return Response({
-            "report": report,
-            "raw_results": results 
+            "message": "Evaluation started",
+            "status": "processing"
         })
 
     except Exception as e:
-        return Response({"error": str(e)}, status=500)@api_view(['GET'])
+        return Response({"error": str(e)}, status=500)
+
+@api_view(["GET"])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_interview_status(request):
+    try:
+        session_id_str = request.session.get('session_id')
+        if not session_id_str:
+            return Response({"error": "No active session"}, status=400)
+            
+        interview_session = Session.objects.get(id=session_id_str)
+        return Response({
+            "status": interview_session.tech_status,
+            "session_id": str(interview_session.id)
+        })
+    except Session.DoesNotExist:
+        return Response({"error": "Session not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
 def question_audio(request):
@@ -169,3 +238,50 @@ def question_audio(request):
     audio_buffer.seek(0)
 
     return HttpResponse(audio_buffer.read(), content_type='audio/mpeg')
+
+@api_view(['POST'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def acknowledge_result_view(request):
+    try:
+        session_id = request.data.get("session_id")
+        round_type = request.data.get("round_type", "technical")
+        
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=400)
+            
+        session = Session.objects.get(id=session_id, user=request.user)
+        
+        if round_type == "technical":
+            tech_round = session.technical_round
+            tech_round.is_result_acknowledged = True
+            tech_round.save()
+            return Response({"message": "Technical round acknowledged."})
+            
+        return Response({"error": "Invalid round_type"}, status=400)
+    except Session.DoesNotExist:
+        return Response({"error": "Session not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_pending_notifications_view(request):
+    try:
+        sessions = Session.objects.filter(user=request.user)
+        pending = []
+        
+        for session in sessions:
+            if hasattr(session, 'technical_round'):
+                tech_round = session.technical_round
+                if tech_round.ai_evaluation and not tech_round.is_result_acknowledged:
+                    pending.append({
+                        "session_id": str(session.id),
+                        "round_type": "technical",
+                        "status": "completed"
+                    })
+        
+        return Response({"pending": pending})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
