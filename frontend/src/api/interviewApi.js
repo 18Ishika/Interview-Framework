@@ -30,6 +30,9 @@ export const evaluateAnswer = (audioBlob, getToken) => {
 
 export const getResults = (getToken) =>
   authFetch(`${BASE_URL}/results/`, {}, getToken);
+
+export const getInterviewStatus = (getToken) =>
+  authFetch(`${BASE_URL}/status/`, {}, getToken);
 export const fetchQuestionAudio = async (getToken) => {
   const token = await getToken();
   const res = await fetch(`${BASE_URL}/question-audio/`, {
@@ -40,3 +43,13 @@ export const fetchQuestionAudio = async (getToken) => {
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 };
+
+export const acknowledgeResult = (sessionId, roundType, getToken) =>
+  authFetch(`${BASE_URL}/acknowledge/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, round_type: roundType }),
+  }, getToken);
+
+export const getPendingNotifications = (getToken) =>
+  authFetch(`${BASE_URL}/notifications/pending/`, {}, getToken);
