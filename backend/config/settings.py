@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- Security ---
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # --- Apps ---
 INSTALLED_APPS = [
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "resume",
     "interview_sessions",
     "tech_int",
+    "hr_int",
 ]
 
 # --- Middleware ---
