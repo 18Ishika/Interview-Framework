@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "interview_sessions",
     "tech_int",
     "hr_int",
+    "coding_round",
 ]
 
 # --- Middleware ---
