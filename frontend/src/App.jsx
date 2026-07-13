@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, Navigate ,useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from '@clerk/clerk-react';
 import './App.css';
 import { useBackendSync } from './hooks/useBackendSync';
@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import InterviewPreflight from './components/InterviewPreflight';
 import InterviewSetup from './pages/InterviewSetup';
 import InterviewSession from './pages/InterviewSession';
+import HrInterviewSession from './pages/HrInterviewSession';
 import InterviewResults from './pages/InterviewResults';
 import Login from './pages/login';
 import Signup from './pages/signup';
@@ -56,7 +57,13 @@ function PreflightPage() {
   const location = useLocation();
   return (
     <ProtectedRoute>
-      <InterviewPreflight onBeginRealInterview={() => navigate('/interview/session', { state: location.state })} />
+      <InterviewPreflight onBeginRealInterview={() => {
+        if (location.state?.type === 'hr') {
+          navigate('/interview/hr', { state: location.state });
+        } else {
+          navigate('/interview/session', { state: location.state });
+        }
+      }} />
     </ProtectedRoute>
   );
 }
@@ -79,6 +86,9 @@ function App() {
           <Route path="/interview/preflight" element={<PreflightPage />} />
           <Route path="/interview/session" element={
             <ProtectedRoute><InterviewSession /></ProtectedRoute>
+          } />
+          <Route path="/interview/hr" element={
+            <ProtectedRoute><HrInterviewSession /></ProtectedRoute>
           } />
           <Route path="/interview/results" element={
             <ProtectedRoute><InterviewResults /></ProtectedRoute>

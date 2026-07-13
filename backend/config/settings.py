@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "resume",
     "interview_sessions",
     "tech_int",
+    "hr_int",
     "coding_round",
 ]
 
