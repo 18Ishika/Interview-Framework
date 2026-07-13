@@ -19,6 +19,15 @@ export const startInterview = (role, getToken) =>
     body: JSON.stringify({ role }),
   }, getToken);
 
+export const startHrInterview = (getToken) => {
+  const hrUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
+  return authFetch(`${hrUrl}/start/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  }, getToken);
+};
+
 export const getQuestion = (getToken) =>
   authFetch(`${BASE_URL}/question/`, {}, getToken);
 
