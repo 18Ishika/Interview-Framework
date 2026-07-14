@@ -11,6 +11,8 @@ from users.authentication import ClerkAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+from django.utils import timezone
+
 logger = logging.getLogger(__name__)
 
 @api_view(["POST"])
@@ -28,8 +30,8 @@ def start_hr_interview(request):
         interview_session.hr_status = "in_progress"
         interview_session.save()
 
-        # Initialize HrRound
-        HrRound.objects.create(session=interview_session)
+        # Initialize HrRound with started_at time
+        HrRound.objects.create(session=interview_session, started_at=timezone.now())
 
         return JsonResponse({"session_id": str(session_id)}, status=200)
     except Exception as e:
@@ -84,6 +86,14 @@ def finish_upload(request):
             if not session_id:
                 return JsonResponse({"error": "Missing session_id"}, status=400)
                 
+            # Set submitted_at on HrRound
+            try:
+                hr_round = HrRound.objects.get(session_id=session_id)
+                hr_round.submitted_at = timezone.now()
+                hr_round.save()
+            except HrRound.DoesNotExist:
+                logger.warning(f"HrRound for session {session_id} not found when saving submitted_at")
+
             # Trigger Celery task immediately — chunks are already here
             assemble_and_upload_hr_video_task.delay(session_id, total_chunks)
             
