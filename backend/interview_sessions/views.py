@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 
+from django.utils import timezone
 from .models import Session, TechnicalRound, HrRound
 from .serializers import MediaUploadSerializer
 from .services.cloudinary_service import CloudinaryService
@@ -123,7 +124,9 @@ class HrRoundUploadView(APIView):
         session, _ = Session.objects.get_or_create(id=session_id, defaults={"user": user})
 
         # Get or create the HrRound record
-        hr_round, _ = HrRound.objects.get_or_create(session=session)
+        hr_round, created = HrRound.objects.get_or_create(session=session)
+        if created or not hr_round.started_at:
+            hr_round.started_at = timezone.now()
 
         uploaded = {}
 
@@ -140,6 +143,7 @@ class HrRoundUploadView(APIView):
                 hr_round.audio_recording.append(audio_url)
                 uploaded["audio_url"] = audio_url
 
+            hr_round.submitted_at = timezone.now()
             hr_round.save()
 
         except ValueError as e:
