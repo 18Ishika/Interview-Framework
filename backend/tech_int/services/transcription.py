@@ -3,7 +3,7 @@ import imageio_ffmpeg
 import numpy as np
 import whisper
 
-ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+# ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
 
 def patched_load_audio(file, sr=16000):
     cmd = [
@@ -17,7 +17,7 @@ def patched_load_audio(file, sr=16000):
 whisper.audio.load_audio = patched_load_audio
 
 # Load model eagerly at module level
-model = whisper.load_model("small")
+# model = whisper.load_model("small")
 
 def transcribe(audio_path: str) -> str:
     result = model.transcribe(audio_path)

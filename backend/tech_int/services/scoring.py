@@ -2,10 +2,10 @@ import re
 import spacy
 from sentence_transformers import SentenceTransformer, CrossEncoder, util
 
-nlp = spacy.load("en_core_web_sm")
-st_model = SentenceTransformer("all-MiniLM-L6-v2")
-nli_model = CrossEncoder("cross-encoder/nli-deberta-v3-base")
-st_util = util
+# nlp = spacy.load("en_core_web_sm")
+# st_model = SentenceTransformer("all-MiniLM-L6-v2")
+# nli_model = CrossEncoder("cross-encoder/nli-deberta-v3-base")
+# st_util = util
 
 def extract_technical_keywords(text: str) -> set:
     doc = nlp(text.lower())
