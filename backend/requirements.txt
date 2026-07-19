@@ -70,7 +70,6 @@ pillow==12.2.0
 preshed==3.0.13
 prompt_toolkit==3.0.52
 proto-plus==1.28.0
-protobuf==5.29.6
 psycopg2-binary==2.9.12
 pusher==3.3.4
 pyasn1==0.6.3
@@ -128,3 +127,6 @@ wcwidth==0.8.2
 weasel==1.0.0
 websockets==16.0
 wrapt==2.2.1
+protobuf==4.25.8
+mediapipe==0.10.14
+opencv-python-headless

@@ -5,6 +5,7 @@ from celery import shared_task
 from django.conf import settings
 from interview_sessions.models import Session, HrRound
 from interview_sessions.services.cloudinary_service import CloudinaryService
+from .services.visual_behavior_service import VisualBehaviorService
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,25 @@ def assemble_and_upload_hr_video_task(self, session_id, total_chunks=None):
         
         file_size = os.path.getsize(final_video_path)
         logger.info(f"[Celery] Assembled video is {file_size / 1024:.1f} KB from {found_chunks} chunks")
+
+        # Visual behavior analysis (posture / eye contact / blink)
+        try:
+            behavior_service = VisualBehaviorService(final_video_path, annotate=False)
+            behavior_report = behavior_service.run()
+
+            hr_round = HrRound.objects.get(session_id=session_id)
+            hr_round.posture_metric = {
+                **behavior_report["posture"],
+                "head_pose": behavior_report["head_pose"],
+            }
+            hr_round.eye_contact_metrics = {
+                **behavior_report["gaze"],
+                "blink": behavior_report["blink"],
+            }
+            hr_round.save(update_fields=["posture_metric", "eye_contact_metrics"])
+            logger.info(f"[Celery] Saved visual behavior metrics for {session_id}")
+        except Exception as behavior_error:
+            logger.error(f"[Celery] Visual behavior analysis failed for {session_id}: {str(behavior_error)}")
                     
         # Upload to Cloudinary
         logger.info(f"[Celery] Uploading assembled video to Cloudinary for {session_id}")

@@ -11,6 +11,7 @@ from users.authentication import ClerkAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -105,3 +106,19 @@ def finish_upload(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@api_view(["GET"])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_hr_behavior_metrics(request, session_id):
+    try:
+        hr_round = HrRound.objects.get(session_id=session_id)
+    except HrRound.DoesNotExist:
+        return JsonResponse({"error": "HrRound not found for this session_id"}, status=404)
+
+    return JsonResponse({
+        "session_id": str(session_id),
+        "hr_status": hr_round.session.hr_status,
+        "posture_metric": hr_round.posture_metric,
+        "eye_contact_metrics": hr_round.eye_contact_metrics,
+    }, status=200)
