@@ -1,20 +1,13 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .services.groq_feedback import generate_final_feedback
-import tempfile, os
 from celery import chord
 from .tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
-import json
 from gtts import gTTS
-from django.http import FileResponse
 import io
 from django.http import HttpResponse
 from users.authentication import ClerkAuthentication
-from interview_sessions.models import Session, TechnicalRound
+from interview_sessions.models import Session, TechnicalRound ,HrRound
 from django.utils import timezone
 import uuid
 from interview_sessions.services.cloudinary_service import CloudinaryService
@@ -257,13 +250,18 @@ def acknowledge_result_view(request):
             tech_round.is_result_acknowledged = True
             tech_round.save()
             return Response({"message": "Technical round acknowledged."})
+
+        if round_type == "hr":
+            hr_round = session.hr_round
+            hr_round.is_result_acknowledged = True
+            hr_round.save()
+            return Response({"message": "HR round acknowledged."})
             
         return Response({"error": "Invalid round_type"}, status=400)
     except Session.DoesNotExist:
         return Response({"error": "Session not found"}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
 @api_view(['GET'])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
@@ -279,6 +277,15 @@ def get_pending_notifications_view(request):
                     pending.append({
                         "session_id": str(session.id),
                         "round_type": "technical",
+                        "status": "completed"
+                    })
+
+            if hasattr(session, 'hr_round'):
+                hr_round = session.hr_round
+                if session.hr_status == "completed" and not hr_round.is_result_acknowledged:
+                    pending.append({
+                        "session_id": str(session.id),
+                        "round_type": "hr",
                         "status": "completed"
                     })
         

@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/coding-round', icon: 'ti-code',             label: 'Coding Round' },
   { to: '/interview',    icon: 'ti-microphone',       label: 'Interview' },
   { to: '/account',      icon: 'ti-user-circle',      label: 'Account' },
+  { to: '/interview/history', icon: 'ti-history',     label: 'History' },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {

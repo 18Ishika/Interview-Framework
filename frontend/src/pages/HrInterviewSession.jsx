@@ -110,7 +110,7 @@ export default function HrInterviewSession() {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
           mediaRecorderRef.current.requestData();
         }
-      }, 20000);
+      }, 180000);
 
       setPhase("recording");
       setError(null);

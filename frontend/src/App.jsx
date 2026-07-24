@@ -4,6 +4,7 @@ import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn, useUser } from '@
 import './App.css';
 import { useBackendSync } from './hooks/useBackendSync';
 import Navbar from './components/Navbar';
+import InterviewHistory from './pages/InterviewHistory';
 import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
@@ -96,11 +97,12 @@ function App() {
 
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
-            <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
-            <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          </Route>
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
+          <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
+          <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        </Route>
         </Routes>
       </BrowserRouter>
     </ClerkProvider>

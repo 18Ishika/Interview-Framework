@@ -62,3 +62,19 @@ export const acknowledgeResult = (sessionId, roundType, getToken) =>
 
 export const getPendingNotifications = (getToken) =>
   authFetch(`${BASE_URL}/notifications/pending/`, {}, getToken);
+
+export const getHrResults = (sessionId, getToken) => {
+  const hrUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
+  return authFetch(`${hrUrl}/metrics/${sessionId}/`, {}, getToken);
+};
+// Add alongside your existing getResults / getHrResults in interviewApi.js
+// Adjust BASE_URL / header setup to match whatever those two already use.
+const interviewSessionsUrl = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'interview')
+  : "http://localhost:8000/api/interview";
+
+export const getInterviewHistory = (getToken) =>
+  authFetch(`${interviewSessionsUrl}/history/`, {}, getToken);
+
+export const getTechnicalResultsBySession = (sessionId, getToken) =>
+  authFetch(`${interviewSessionsUrl}/technical/results/${sessionId}/`, {}, getToken);

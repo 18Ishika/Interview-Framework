@@ -73,7 +73,7 @@ export default function Dashboard() {
     }
     setShowResultsPopup(false);
     if (navigateToResults) {
-      navigate('/interview/results');
+      navigate('/interview/results', { state: { sessionId: currentSessionId, roundType: currentRoundType } });
     }
   };
 
@@ -97,8 +97,8 @@ export default function Dashboard() {
           }}>
             <h2 style={{ fontSize: '24px', marginBottom: '16px', color: '#111827' }}>🎉 Evaluation Complete!</h2>
             <p style={{ color: '#4b5563', marginBottom: '24px', lineHeight: '1.5' }}>
-              Your technical interview has been successfully evaluated by our AI.
-            </p>
+                Your {currentRoundType === 'hr' ? 'HR' : 'technical'} interview has been successfully evaluated by our AI.
+              </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button
                 onClick={() => handleDismissPopup(false)}

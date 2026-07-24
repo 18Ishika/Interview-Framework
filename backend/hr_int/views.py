@@ -121,4 +121,5 @@ def get_hr_behavior_metrics(request, session_id):
         "hr_status": hr_round.session.hr_status,
         "posture_metric": hr_round.posture_metric,
         "eye_contact_metrics": hr_round.eye_contact_metrics,
+        "qna_metrics": hr_round.qna_metrics,
     }, status=200)
