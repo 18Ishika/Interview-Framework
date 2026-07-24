@@ -127,6 +127,6 @@ wcwidth==0.8.2
 weasel==1.0.0
 websockets==16.0
 wrapt==2.2.1
-protobuf==4.25.8
-mediapipe==0.10.14
+protobuf==5.29.6
+mediapipe==0.10.35
 opencv-python-headless
