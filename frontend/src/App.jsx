@@ -10,6 +10,7 @@ import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
 import DashboardPreview from './components/DashboardPreview';
 import Profile from './pages/Profile';
+import PublicCandidateProfile from './pages/PublicCandidateProfile';
 import InterviewPreflight from './components/InterviewPreflight';
 import InterviewSetup from './pages/InterviewSetup';
 import InterviewSession from './pages/InterviewSession';
@@ -82,6 +83,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login/*" element={<Login />} />
           <Route path="/signup/*" element={<Signup />} />
+          <Route path="/candidate/:candidateId" element={<PublicCandidateProfile />} />
 
           {/* Interview flow — outside AppLayout (no sidebar) */}
           <Route path="/interview/preflight" element={<PreflightPage />} />
@@ -97,12 +99,12 @@ function App() {
 
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
-          <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
-          <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
-          <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        </Route>
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
+            <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
+            <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </ClerkProvider>

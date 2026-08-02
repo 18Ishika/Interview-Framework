@@ -9,9 +9,8 @@ from .services.transcription import transcribe
 from .services.scoring import score_answer
 from .services.groq_feedback import generate_final_feedback
 
-
 @shared_task(bind=True, max_retries=2)
-def evaluate_single_answer_task(self, audio_url, transcript_reference, forced_keywords, question_context):
+def evaluate_single_answer_task(self, audio_url, question_context):
     temp_audio_path = None
     question_text = question_context.get("question", "Unknown Question")
     print(f"[Celery] Starting evaluation task for question: '{question_text}'")
@@ -19,7 +18,7 @@ def evaluate_single_answer_task(self, audio_url, transcript_reference, forced_ke
         # Download the audio file to a temp file
         fd, temp_audio_path = tempfile.mkstemp(suffix=".webm")
         os.close(fd)
-        
+
         print(f"[Celery] Downloading audio from: {audio_url}")
         req = urllib.request.Request(audio_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req) as response, open(temp_audio_path, 'wb') as out_file:
@@ -27,21 +26,18 @@ def evaluate_single_answer_task(self, audio_url, transcript_reference, forced_ke
         print(f"[Celery] Audio downloaded successfully to {temp_audio_path}")
 
         print("[Celery] Starting transcription...")
-        transcript = transcribe(temp_audio_path) 
+        transcript = transcribe(temp_audio_path)
         print(f"[Celery] Transcription complete: '{transcript}'")
 
         print("[Celery] Starting scoring...")
         result = score_answer(
             candidate=transcript,
-            reference=transcript_reference,
-            forced_keywords=forced_keywords,
+            question=question_text,
         )
-        print(f"[Celery] Scoring complete. Score: {result.get('score', 0)}")
-        
+        print(f"[Celery] Scoring complete. Score: {result.get('final_score', 0)}")
+
         result["transcript"] = transcript
         result["audio_url"] = audio_url
-        result["reference"] = transcript_reference
-        result["keywords"] = forced_keywords
         result["status"] = "evaluated"
         result.update(question_context)
 
@@ -53,7 +49,6 @@ def evaluate_single_answer_task(self, audio_url, transcript_reference, forced_ke
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
             print(f"[Celery] Cleaned up temporary audio file: {temp_audio_path}")
-
 
 @shared_task(bind=True, max_retries=2)
 def finalize_evaluation_chord_task(self, results, session_id):

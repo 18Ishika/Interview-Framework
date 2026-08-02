@@ -161,14 +161,13 @@ def get_results_view(request):
                 "topic": q.get("topic"),
                 "concept": q.get("concept")
             }
+        
             eval_tasks.append(
-                evaluate_single_answer_task.s(
-                    audio_url=q.get("audio_url"),
-                    transcript_reference=q.get("reference"),
-                    forced_keywords=q.get("keywords", []),
-                    question_context=question_context
-                )
+            evaluate_single_answer_task.s(
+                audio_url=q.get("audio_url"),
+                question_context=question_context
             )
+        )
 
         if not eval_tasks:
             return Response({"error": "No valid audio recordings found to evaluate"}, status=400)

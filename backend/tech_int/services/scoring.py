@@ -1,65 +1,70 @@
-import re
-import spacy
-from sentence_transformers import SentenceTransformer, CrossEncoder, util
+import os
+import json
+from dotenv import load_dotenv
+from groq import Groq
 
-nlp = spacy.load("en_core_web_sm")
-st_model = SentenceTransformer("all-MiniLM-L6-v2")
-nli_model = CrossEncoder("cross-encoder/nli-deberta-v3-base")
-st_util = util
+load_dotenv()
+api_key = os.getenv("GROQ_API_KEY")
+_client = Groq(api_key=api_key)
 
-def extract_technical_keywords(text: str) -> set:
-    doc = nlp(text.lower())
+MODEL = "llama-3.3-70b-versatile"
 
-    spacy_kw = {
-        token.lemma_ for token in doc
-        if not token.is_stop
-        and token.is_alpha
-        and token.pos_ in {"NOUN", "VERB", "PROPN", "ADJ"}
-    }
+SCORE_PROMPT = """You are grading a candidate's spoken answer to a technical
+interview question. Judge it purely on conceptual correctness and depth —
+NOT on whether it matches any specific wording or phrasing. Different
+candidates may explain the same correct concept in completely different
+ways; do not penalize style, structure, or word choice.
 
-    codes = set(re.findall(r'\b[1-5](?:xx|\d{2})\b', text))
-    acronyms = {a.lower() for a in re.findall(r'\b[A-Z]{2,}\b', text)}
+First, decide for yourself what the key concepts/terms a strong answer to
+this question would need to cover. Then check how many of those the
+candidate actually demonstrated (in their own words, paraphrases count).
 
-    return spacy_kw | codes | acronyms
+Question: {question}
+Candidate's answer: {candidate}
+
+Evaluate and return STRICT JSON only, no markdown, no backticks, in exactly
+this shape:
+{{
+  "correctness_score": <float 0-1, how conceptually correct and complete the answer is>,
+  "keyword_coverage": <float 0-1, fraction of key concepts (that you identified) the candidate demonstrated>,
+  "contradiction_score": <float 0-1, how much the answer contains factually wrong or contradictory statements>,
+  "matched_keywords": [<key concepts the candidate did demonstrate understanding of>],
+  "missed_keywords": [<key concepts relevant to the question that were missing>]
+}}
+"""
 
 
-def check_contradiction(candidate: str, reference: str) -> float:
-    scores = nli_model.predict([(candidate, reference)])
-    # scores[0] is [contradiction, neutral, entailment]
-    contradiction_score = float(scores[0][0])
-    return contradiction_score
+def score_answer(candidate: str, question: str) -> dict:
+    prompt = SCORE_PROMPT.format(question=question, candidate=candidate)
 
+    try:
+        response = _client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print("GROQ SCORE ERROR:", repr(e))
+        parsed = {
+            "correctness_score": 0.0,
+            "keyword_coverage": 0.0,
+            "contradiction_score": 0.0,
+            "matched_keywords": [],
+            "missed_keywords": [],
+        }
 
-def score_answer(candidate: str, reference: str, forced_keywords: list = []) -> dict:
-    # Component 1: semantic similarity
-    embeddings = st_model.encode([candidate, reference])
-    semantic = st_util.cos_sim(embeddings[0], embeddings[1]).item()
+    correctness = float(parsed.get("correctness_score", 0.0))
+    kw_score = float(parsed.get("keyword_coverage", 0.0))
+    contradiction = float(parsed.get("contradiction_score", 0.0))
+    matched = parsed.get("matched_keywords", [])
+    missed = parsed.get("missed_keywords", [])
 
-    # Component 2: keyword coverage
-    if forced_keywords:
-        candidate_lower = candidate.lower()
-        matched = [kw for kw in forced_keywords if kw.lower() in candidate_lower]
-        missed = [kw for kw in forced_keywords if kw.lower() not in candidate_lower]
-        kw_score = len(matched) / len(forced_keywords) if forced_keywords else 1.0
-    else:
-        ref_kw = extract_technical_keywords(reference)
-        cand_kw = extract_technical_keywords(candidate)
-        matched = list(ref_kw & cand_kw)
-        missed = list(ref_kw - cand_kw)
-        kw_score = len(matched) / len(ref_kw) if ref_kw else 1.0
+    final = round((0.45 * correctness) + (0.55 * kw_score), 4)
 
-    # Component 3: contradiction check
-    contradiction = check_contradiction(candidate, reference)
-
-    # Final weighted score
-    final = (0.45 * semantic) + (0.55 * kw_score)
-    final = round(final, 4)
-
-    # Determine label
-    # Hard override 1 — strong contradiction detected
     if contradiction > 0.7:
         label = "Incorrect"
-    # Hard override 2 — very low keyword coverage
     elif kw_score < 0.30:
         label = "Incorrect"
     elif final >= 0.75:
@@ -70,11 +75,11 @@ def score_answer(candidate: str, reference: str, forced_keywords: list = []) -> 
         label = "Incorrect"
 
     return {
-        "semantic_score": round(semantic, 4),
+        "correctness_score": round(correctness, 4),
         "keyword_coverage": round(kw_score, 4),
         "contradiction_score": round(contradiction, 4),
         "final_score": final,
         "label": label,
         "matched_keywords": matched,
-        "missed_keywords": missed
+        "missed_keywords": missed,
     }

@@ -33,15 +33,13 @@ Input data:
 """
 
 VERDICT_MAP = {"Correct": "Strong Answer", "Partial": "Good Attempt", "Incorrect": "Needs Work"}
-
-
 def generate_final_feedback(results: list) -> dict:
     """
-    Builds the final report almost entirely from local scoring data.
-    Groq (Llama 3.3 70B) is used ONLY to generate a short conceptual
-    explanation per question — nothing else (no ratings, no summaries,
-    no keywords) comes from the LLM, keeping dependency on it minimal.
-    """
+    Takes the already-scored results (scoring/labeling/keywords done via
+    LLM in score_answer()) and generates a short conceptual explanation
+    per question using Groq. Overall summary/rating are computed locally
+    from the final_score values.
+    """    
     explanations = _get_explanations(results)
 
     per_question_feedback = []

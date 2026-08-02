@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import { API_BASE, SERVER_BASE } from '../lib/config';
 
 export default function Profile() {
   const { getToken } = useAuth();
+  const { user } = useUser();
 
   const [profile, setProfile] = useState(null);
   const [resume, setResume] = useState(null);
@@ -27,14 +28,12 @@ export default function Profile() {
         });
         const data = await res.json();
 
-        // Map user data to profile state
         if (data.user) {
           setProfile({ ...data.user, job_recommendations: data.job_recommendations });
         } else {
           setProfile(data);
         }
 
-        // Map array structures correctly
         if (data.skills) setSkills(data.skills);
         if (data.projects) setProjects(data.projects.map(p => ({ ...p, editing: false })));
         if (data.education) setEducation(data.education.map(e => ({ text: e, editing: false })));
@@ -95,7 +94,6 @@ export default function Profile() {
     }
   };
 
-  // skill handlers
   const handleDeleteSkill = (index) => {
     setSkills(prev => prev.filter((_, i) => i !== index));
   };
@@ -109,7 +107,6 @@ export default function Profile() {
     setShowSkillInput(false);
   };
 
-  // project handlers
   const handleProjectChange = (index, value) => {
     setProjects(prev => prev.map((p, i) => i === index ? { ...p, title: value } : p));
   };
@@ -126,7 +123,6 @@ export default function Profile() {
     setProjects(prev => [...prev, { title: '', description: [], editing: true }]);
   };
 
-  // education handlers
   const handleEducationChange = (index, value) => {
     setEducation(prev => prev.map((e, i) => i === index ? { ...e, text: value } : e));
   };
@@ -143,13 +139,53 @@ export default function Profile() {
     setEducation(prev => [...prev, { text: '', editing: true }]);
   };
 
-  // ── Shared styles (aligned with index.css tokens) ──────────────────────────
+  // ── ID card derived data ────────────────────────────────────────────────
+
+  const displayName =
+    (profile?.first_name || profile?.last_name)
+      ? `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
+      : (user?.fullName || 'Your Name');
+
+  const idNumber = 'IQ-' + (user?.id || profile?.id || '000000')
+    .toString()
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(-6)
+    .toUpperCase();
+
+  const issuedDate = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : '—';
+
+  const roleLabel = profile?.target_role || 'Candidate';
+
+  // Readiness is derived client-side from profile completeness until a
+  // dedicated backend field (e.g. profile.readiness_score) exists.
+  const readyScore = Math.round(
+    ([
+      !!profile?.resume_url,
+      skills.length > 0,
+      projects.length > 0,
+      education.length > 0,
+    ].filter(Boolean).length / 4) * 100
+  );
+  const isReady = readyScore >= 75;
+  const statusLabel = isReady ? 'Interview Ready' : readyScore === 0 ? 'Not Started' : 'In Progress';
+
+  const topRecommendations = (profile?.job_recommendations || []).slice(0, 2);
+
+  const publicProfileUrl = `${window.location.origin}/candidate/${idNumber}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=4&color=1F4F78&bgcolor=FFFFFF&data=${encodeURIComponent(publicProfileUrl)}`;
+
+  // ── Shared styles ───────────────────────────────────────────────────────
+
+  const TINT = 'var(--color-bg-tertiary)';
+  const TINT_BORDER = 'var(--color-border)';
 
   const inputStyle = {
     width: '100%',
     padding: '8px 10px',
     background: 'var(--color-bg-primary)',
-    border: '1px solid var(--color-border-strong)',   // was --color-primary
+    border: '1px solid var(--color-border-strong)',
     borderRadius: 'var(--radius-md)',
     fontSize: 13,
     color: 'var(--color-text-primary)',
@@ -177,18 +213,38 @@ export default function Profile() {
   };
 
   const addBtnStyle = {
-    background: 'var(--color-bg-tertiary)',
-    border: '1px solid var(--color-border)',
+    background: TINT,
+    border: `1px solid ${TINT_BORDER}`,
     borderRadius: 'var(--radius-md)',
     padding: '4px 10px',
     fontSize: 18,
     cursor: 'pointer',
-    color: 'var(--color-text-primary)',
+    color: 'var(--color-primary-dark)',
     lineHeight: 1,
     transition: 'background 0.15s, border-color 0.15s',
   };
 
   const saveDisabled = saving || (!resume && !photo);
+
+  const cardStyle = {
+    background: 'var(--color-bg-secondary)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '28px',
+    boxShadow: 'var(--shadow-md)',
+  };
+
+  const chipStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '3px 10px',
+    background: TINT,
+    border: `1px solid ${TINT_BORDER}`,
+    borderRadius: 20,
+    fontSize: 11,
+    fontWeight: 500,
+    color: 'var(--color-primary-hover)',
+  };
 
   if (loading) return (
     <div style={{
@@ -204,14 +260,6 @@ export default function Profile() {
     </div>
   );
 
-  const cardStyle = {
-    background: 'var(--color-bg-secondary)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-lg)',
-    padding: '28px',
-    boxShadow: 'var(--shadow-md)',
-  };
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -219,7 +267,45 @@ export default function Profile() {
       fontFamily: 'var(--font-body)',
       padding: '60px 24px',
     }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <style>{`
+        .idcard-status-dot {
+          display: inline-block;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--color-success);
+          margin-right: 6px;
+        }
+        .idcard-progress-track {
+          width: 100%;
+          height: 5px;
+          border-radius: var(--radius-full);
+          background: var(--color-bg-tertiary);
+          overflow: hidden;
+        }
+        .idcard-progress-fill {
+          height: 100%;
+          border-radius: var(--radius-full);
+          background: var(--color-primary-dark);
+          transition: width 0.4s ease;
+        }
+        .top-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          align-items: start;
+        }
+        .left-col {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        @media (max-width: 800px) {
+          .top-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
@@ -234,138 +320,243 @@ export default function Profile() {
             color: 'var(--color-text-secondary)',
             fontSize: 14,
             marginTop: 6,
-          }}>Upload your resume and photo</p>
+          }}>Your credential — and the details behind it</p>
         </div>
 
-        {/* Top grid: details on left, photo on right */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 260px',
-          gap: 20,
-          alignItems: 'start',
-          marginBottom: 24,
-        }}>
+        {/* Left: uploads · Right: minimal ID card */}
+        <div className="top-grid" style={{ marginBottom: 24 }}>
 
-          {/* Left: Resume + Save */}
-          <div style={cardStyle}>
-            <h2 style={{ ...sectionHeadingStyle, marginBottom: 16 }}>Resume</h2>
+          {/* LEFT COLUMN */}
+          <div className="left-col">
+            {/* Resume + Save */}
+            <div style={cardStyle}>
+              <h2 style={{ ...sectionHeadingStyle, marginBottom: 16 }}>Resume</h2>
 
-            <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--color-text-primary)',
+                  marginBottom: 8,
+                }}>
+                  Resume (PDF / DOCX)
+                </label>
+                {profile?.resume_url && (
+                  <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                    ✅ Resume uploaded
+                  </p>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={e => setResume(e.target.files[0])}
+                  style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={saveDisabled}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
+                  color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: saveDisabled ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-body)',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
+                onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
+              >
+                {saving ? 'Saving...' : 'Save Profile'}
+              </button>
+
+              {message && (
+                <p style={{
+                  marginTop: 16,
+                  textAlign: 'center',
+                  fontSize: 13,
+                  color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
+                }}>
+                  {message}
+                </p>
+              )}
+
+              {parsing && (
+                <p style={{
+                  marginTop: 12,
+                  textAlign: 'center',
+                  fontSize: 13,
+                  color: 'var(--color-text-secondary)',
+                }}>
+                  Extracting skills and projects from your resume...
+                </p>
+              )}
+            </div>
+
+            {/* Profile Photo */}
+            <div style={{ ...cardStyle, textAlign: 'center' }}>
               <label style={{
                 display: 'block',
                 fontSize: 13,
                 fontWeight: 500,
                 color: 'var(--color-text-primary)',
-                marginBottom: 8,
+                marginBottom: 16,
               }}>
-                Resume (PDF / DOCX)
+                Profile Photo
               </label>
-              {profile?.resume_url && (
-                <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                  ✅ Resume uploaded
-                </p>
-              )}
+              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                {profile?.profile_img_url ? (
+                  <img
+                    src={`${profile.profile_img_url}`}
+                    alt="Profile"
+                    style={{
+                      width: 88,
+                      height: 88,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid var(--color-border)',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 88,
+                    height: 88,
+                    borderRadius: '50%',
+                    background: TINT,
+                    border: '2px solid var(--color-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 26,
+                    color: 'var(--color-text-muted)',
+                  }}>👤</div>
+                )}
+              </div>
               <input
                 type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={e => setResume(e.target.files[0])}
-                style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+                accept="image/*"
+                onChange={e => setPhoto(e.target.files[0])}
+                style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)', maxWidth: '100%' }}
               />
             </div>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSave}
-              disabled={saveDisabled}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
-                color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: saveDisabled ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-body)',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
-              onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
-            >
-              {saving ? 'Saving...' : 'Save Profile'}
-            </button>
-
-            {/* Message */}
-            {message && (
-              <p style={{
-                marginTop: 16,
-                textAlign: 'center',
-                fontSize: 13,
-                color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
-              }}>
-                {message}
-              </p>
-            )}
-
-            {/* Parsing indicator */}
-            {parsing && (
-              <p style={{
-                marginTop: 12,
-                textAlign: 'center',
-                fontSize: 13,
-                color: 'var(--color-text-secondary)',
-              }}>
-                Extracting skills and projects from your resume...
-              </p>
-            )}
           </div>
 
-          {/* Right: Profile Photo */}
-          <div style={{ ...cardStyle, textAlign: 'center' }}>
-            <label style={{
-              display: 'block',
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'var(--color-text-primary)',
-              marginBottom: 16,
-            }}>
-              Profile Photo
-            </label>
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
-              {profile?.profile_img_url ? (
-                <img
-                  src={`${profile.profile_img_url}`}
-                  alt="Profile"
-                  style={{
-                    width: 96,
-                    height: 96,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid var(--color-border)',
-                  }}
-                />
-              ) : (
+          {/* RIGHT COLUMN — minimal ID card */}
+          <div style={{
+            background: 'var(--color-bg-primary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-sm)',
+            padding: '20px',
+          }}>
+            {/* Top row: photo + identity + status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: 'var(--color-bg-tertiary)',
+                border: '1px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {profile?.profile_img_url ? (
+                  <img src={profile.profile_img_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: 18, color: 'var(--color-text-muted)' }}>👤</span>
+                )}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: '50%',
-                  background: 'var(--color-bg-tertiary)',
-                  border: '2px solid var(--color-border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 28,
-                  color: 'var(--color-text-muted)',
-                }}>👤</div>
-              )}
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: 'var(--color-text-primary)',
+                  overflowWrap: 'anywhere',
+                  lineHeight: 1.2,
+                }}>
+                  {displayName}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                  {roleLabel}
+                </div>
+              </div>
+
+              <span style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                padding: '4px 8px',
+                borderRadius: 'var(--radius-full)',
+                background: isReady ? 'rgba(63,168,115,0.12)' : 'rgba(217,164,65,0.14)',
+                color: isReady ? 'var(--color-success)' : 'var(--color-warning)',
+                flexShrink: 0,
+              }}>
+                {statusLabel}
+              </span>
             </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={e => setPhoto(e.target.files[0])}
-              style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)', maxWidth: '100%' }}
-            />
+
+            <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '14px 0' }} />
+
+            {/* ID + member since */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 14 }}>
+              <span>ID · <span style={{ fontFamily: 'monospace', color: 'var(--color-text-secondary)' }}>{idNumber}</span></span>
+              <span>Since {issuedDate}</span>
+            </div>
+
+            {/* Job Recommendations (top 2) */}
+            {topRecommendations.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6 }}>
+                  Top Matches
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {topRecommendations.map((rec, i) => (
+                    <span key={i} style={chipStyle}>{rec.job}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ready score */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                  Ready Score
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)' }}>{readyScore}%</span>
+              </div>
+              <div className="idcard-progress-track">
+                <div className="idcard-progress-fill" style={{ width: `${readyScore}%` }} />
+              </div>
+            </div>
+
+            {/* Footer: status dot + QR */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                <span className="idcard-status-dot" />
+                {statusLabel}
+              </div>
+              <img
+                src={qrCodeUrl}
+                alt="Scan to view public candidate profile"
+                width={44}
+                height={44}
+                style={{ borderRadius: 6, border: '1px solid var(--color-border)' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -378,7 +569,7 @@ export default function Profile() {
                 onClick={() => setShowSkillInput(true)}
                 style={addBtnStyle}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = TINT; }}
               >+</button>
             </div>
 
@@ -425,11 +616,11 @@ export default function Profile() {
                   alignItems: 'center',
                   gap: 4,
                   padding: '4px 10px',
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
+                  background: TINT,
+                  border: `1px solid ${TINT_BORDER}`,
                   borderRadius: 20,
                   fontSize: 12,
-                  color: 'var(--color-text-primary)',
+                  color: 'var(--color-primary-hover)',
                   fontFamily: 'var(--font-body)',
                 }}>
                   {skill}
@@ -461,15 +652,15 @@ export default function Profile() {
                 onClick={handleAddProject}
                 style={addBtnStyle}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = TINT; }}
               >+</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {projects.map((project, i) => (
                 <div key={i} style={{
                   padding: '10px 14px',
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
+                  background: TINT,
+                  border: `1px solid ${TINT_BORDER}`,
                   borderRadius: 'var(--radius-md)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -518,7 +709,7 @@ export default function Profile() {
                 onClick={handleAddEducation}
                 style={addBtnStyle}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-secondary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = TINT; }}
               >+</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -528,8 +719,8 @@ export default function Profile() {
                   alignItems: 'center',
                   gap: 8,
                   padding: '10px 14px',
-                  background: 'var(--color-bg-tertiary)',
-                  border: '1px solid var(--color-border)',
+                  background: TINT,
+                  border: `1px solid ${TINT_BORDER}`,
                   borderRadius: 'var(--radius-md)',
                 }}>
                   {edu.editing ? (
@@ -557,7 +748,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Job Recommendations */}
+        {/* Job Recommendations (full list) */}
         {profile?.job_recommendations?.length > 0 && (
           <div style={{ ...cardStyle, marginBottom: 20 }}>
             <h2 style={{ ...sectionHeadingStyle, marginBottom: 12 }}>Job Recommendations</h2>
@@ -565,11 +756,11 @@ export default function Profile() {
               {profile.job_recommendations.map((rec, i) => (
                 <span key={i} style={{
                   padding: '4px 12px',
-                  background: 'var(--color-primary-light)',
-                  border: '1px solid var(--color-border)',
+                  background: TINT,
+                  border: `1px solid ${TINT_BORDER}`,
                   borderRadius: 20,
                   fontSize: 12,
-                  color: 'var(--color-primary-dark)',
+                  color: 'var(--color-primary-hover)',
                   fontFamily: 'var(--font-body)',
                   fontWeight: 500,
                 }}>
