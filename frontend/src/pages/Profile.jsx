@@ -327,7 +327,13 @@ export default function Profile() {
             }}>Your credential — and the details behind it</p>
           </div>
           <button 
-            onClick={() => navigate('/iq-card')}
+            onClick={() => {
+              if (profile?.platform_id) {
+                navigate(`/profile/iq-card/${profile.platform_id}`);
+              } else {
+                alert("Platform ID not found. Please wait a moment or reload the page.");
+              }
+            }}
             style={{
               padding: '10px 20px',
               background: 'linear-gradient(90deg, #ff8a00, #e52e71)',

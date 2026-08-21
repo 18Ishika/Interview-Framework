@@ -98,6 +98,9 @@ function App() {
             <ProtectedRoute><InterviewResults /></ProtectedRoute>
           } />
 
+          {/* Public IQ Card */}
+          <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
+
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -105,7 +108,6 @@ function App() {
             <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
             <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/iq-card" element={<ProtectedRoute><IQCardPage /></ProtectedRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { API_BASE } from '../lib/config';
 import IQCard from '../components/IQCard/IQCard';
 import logoUrl from '../assets/logo.svg';
 
 export default function IQCardPage() {
-  const { getToken } = useAuth();
-  const { user } = useUser();
+  const { platformId } = useParams();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState(null);
@@ -16,10 +14,10 @@ export default function IQCardPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = await getToken({ skipCache: true });
-        const res = await fetch(`${API_BASE}/user/profile-details/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(`${API_BASE}/user/public/profile/${platformId}/`);
+        if (!res.ok) {
+          throw new Error('Profile not found');
+        }
         const data = await res.json();
 
         let profile = data.user || data;
@@ -37,8 +35,10 @@ export default function IQCardPage() {
         setLoading(false);
       }
     };
-    fetchProfile();
-  }, [getToken]);
+    if (platformId) {
+      fetchProfile();
+    }
+  }, [platformId]);
 
   if (loading) {
     return (
@@ -49,8 +49,8 @@ export default function IQCardPage() {
   }
 
   const handleCopyLink = () => {
-    if (profileData?.user?.platform_id) {
-      const url = `${window.location.origin}/candidate/${profileData.user.platform_id}`;
+    if (platformId) {
+      const url = `${window.location.origin}/profile/iq-card/${platformId}`;
       navigator.clipboard.writeText(url).then(() => {
         alert("Link copied to clipboard!");
       });
