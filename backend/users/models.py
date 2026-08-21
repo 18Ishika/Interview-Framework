@@ -1,4 +1,6 @@
 import uuid
+import random
+import string
 from django.db import models
 
 class User(models.Model):
@@ -14,6 +16,7 @@ class User(models.Model):
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     profile_img_url = models.URLField(blank=True, null=True)
     resume_url = models.URLField(blank=True, null=True)
+    platform_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default="candidate")
     recommended_jobs = models.JSONField(default=list)
     is_active = models.BooleanField(default=True)
@@ -27,6 +30,15 @@ class User(models.Model):
     @property
     def is_anonymous(self):
         return False
+
+    def save(self, *args, **kwargs):
+        if not self.platform_id:
+            while True:
+                new_id = "IQ-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                if not User.objects.filter(platform_id=new_id).exists():
+                    self.platform_id = new_id
+                    break
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.role})"

@@ -32,6 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
             "resume_url",
             "resume",
             "profile_img",
+            "platform_id",
             "created_at",
             "updated_at",
         ]
@@ -39,6 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "profile_img_url",
             "resume_url",
+            "platform_id",
             "created_at",
             "updated_at",
         ]
