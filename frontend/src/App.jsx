@@ -20,6 +20,7 @@ import Login from './pages/login';
 import Signup from './pages/signup';
 import AppLayout from './layouts/AppLayout';
 import Dashboard from './pages/Dashboard';
+import IQCardPage from './pages/IQCardPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -104,6 +105,7 @@ function App() {
             <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
             <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/iq-card" element={<ProtectedRoute><IQCardPage /></ProtectedRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>
