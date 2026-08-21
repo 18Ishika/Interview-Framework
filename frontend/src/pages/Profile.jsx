@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { API_BASE, SERVER_BASE } from '../lib/config';
+import IQCard from '../components/IQCard/IQCard';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { getToken } = useAuth();
   const { user } = useUser();
 
@@ -29,7 +32,7 @@ export default function Profile() {
         const data = await res.json();
 
         if (data.user) {
-          setProfile({ ...data.user, job_recommendations: data.job_recommendations });
+          setProfile({ ...data.user, job_recommendations: data.job_recommendations, scores: data.scores });
         } else {
           setProfile(data);
         }
@@ -308,19 +311,37 @@ export default function Profile() {
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 24,
-            fontWeight: 700,
-            color: 'var(--color-text-primary)',
-            margin: 0,
-          }}>Your Profile</h1>
-          <p style={{
-            color: 'var(--color-text-secondary)',
-            fontSize: 14,
-            marginTop: 6,
-          }}>Your credential — and the details behind it</p>
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 24,
+              fontWeight: 700,
+              color: 'var(--color-text-primary)',
+              margin: 0,
+            }}>Your Profile</h1>
+            <p style={{
+              color: 'var(--color-text-secondary)',
+              fontSize: 14,
+              marginTop: 6,
+            }}>Your credential — and the details behind it</p>
+          </div>
+          <button 
+            onClick={() => navigate('/iq-card')}
+            style={{
+              padding: '10px 20px',
+              background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px 0 rgba(229, 46, 113, 0.39)',
+              transition: 'transform 0.2s',
+            }}
+          >
+            Get your IQ Card
+          </button>
         </div>
 
         {/* Left: uploads · Right: minimal ID card */}
