@@ -1,7 +1,7 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from .serializers import UserSerializer
 from .serializers import UserSerializer
@@ -171,4 +171,90 @@ def get_profile_details(request):
         "skills": skills_data,
         "scores": scores,
         "job_recommendations": [{"job":job} for job in user.recommended_jobs] or []
+    }, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_public_profile_details_by_platform_id(request, platform_id):
+    from .models import User
+    try:
+        user = User.objects.get(platform_id=platform_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user_data = {
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role,
+        "profile_img_url": user.profile_img_url,
+        "resume_url": user.resume_url,
+        "platform_id": user.platform_id,
+        "created_at": user.created_at,
+    }
+
+    education_data = [edu.instituion_name for edu in user.educations.all()]
+
+    experience_data = [
+        {
+            "id": exp.id,
+            "company_name": exp.company_name,
+            "title": exp.title,
+            "employment_type": exp.employment_type,
+            "start_date": exp.start_date,
+            "end_date": exp.end_date,
+            "desc": exp.desc,
+        }
+        for exp in user.experiences.all()
+    ]
+
+    project_data = [
+        {
+            "title": proj.title,
+            "description": [line.strip() for line in proj.desc.split("\n") if line.strip()]
+        }
+        for proj in user.projects.all()
+    ]
+
+    skills_data = [cs.skill.name for cs in user.candidate_skills.all().select_related("skill")]
+
+    latest_session = user.sessions.order_by("-created_at").first()
+    scores = {"overall": 0, "coding": 0, "tech": 0, "hr": 0}
+
+    if latest_session:
+        try:
+            if hasattr(latest_session, "coding_round") and latest_session.coding_round:
+                scores["coding"] = latest_session.coding_round.total_score
+        except Exception:
+            pass
+            
+        try:
+            if hasattr(latest_session, "technical_round") and latest_session.technical_round:
+                ai_eval = latest_session.technical_round.ai_evaluation
+                if isinstance(ai_eval, dict):
+                    scores["tech"] = ai_eval.get("overall_score", 0)
+        except Exception:
+            pass
+            
+        try:
+            if hasattr(latest_session, "hr_round") and latest_session.hr_round:
+                hr_eval = latest_session.hr_round.qna_metrics
+                if isinstance(hr_eval, dict):
+                    scores["hr"] = hr_eval.get("overall_score", 85)
+                else:
+                    scores["hr"] = 80
+        except Exception:
+            pass
+            
+        total = (scores["coding"] + scores["tech"] + scores["hr"]) / 3
+        scores["overall"] = round(total, 2)
+
+    return Response({
+        "user": user_data,
+        "education": education_data,
+        "experience": experience_data,
+        "projects": project_data,
+        "skills": skills_data,
+        "scores": scores,
+        "job_recommendations": []
     }, status=status.HTTP_200_OK)
