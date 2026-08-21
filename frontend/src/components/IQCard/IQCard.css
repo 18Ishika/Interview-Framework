@@ -1,0 +1,236 @@
+.iq-card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  perspective: 1000px;
+  width: 100%;
+  max-width: 400px;
+  height: 600px;
+}
+
+.iq-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.iq-card-container:hover .iq-card-inner {
+  transform: rotateY(180deg);
+}
+
+.iq-card-front, .iq-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Card 1: Profile (Front) */
+.iq-card-front {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1a202c;
+  display: flex;
+  flex-direction: column;
+}
+
+.iq-profile-header-bg {
+  position: relative;
+  height: 120px;
+  background: linear-gradient(135deg, #31678c 0%, #2b4c65 100%);
+}
+
+.iq-profile-id {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.iq-brand-tag {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  color: #63b3ed;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.iq-profile-img-wrapper {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.iq-profile-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.iq-profile-info {
+  margin-top: 55px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.iq-profile-info h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.iq-profile-role {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+  color: #718096;
+}
+
+.iq-profile-date {
+  margin: 5px 0 15px;
+  font-size: 0.8rem;
+  color: #a0aec0;
+}
+
+.iq-stats-overview {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 15px 20px;
+  border-top: 1px solid #edf2f7;
+  border-bottom: 1px solid #edf2f7;
+  margin-bottom: 15px;
+}
+
+.iq-stat-item {
+  text-align: center;
+}
+
+.iq-stat-item-label {
+  font-size: 0.75rem;
+  color: #4299e1;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.iq-stat-item-val {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.iq-profile-body {
+  padding: 0 20px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.iq-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.iq-skill-chip {
+  background: #edf2f7;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+/* Card 2: Performance (Back) */
+.iq-card-back {
+  background-color: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  color: #1a202c;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 30px;
+}
+
+.iq-perf-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.iq-overall-score {
+  font-size: 4.5rem;
+  font-weight: 800;
+  color: #31678c;
+  margin: 10px 0;
+  line-height: 1;
+}
+
+.iq-overall-label {
+  color: #718096;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.iq-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.iq-stat-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 10px;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.iq-stat-box:hover {
+  border-color: #cbd5e0;
+}
+
+.iq-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.iq-stat-label {
+  font-size: 0.75rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.iq-score-good { color: #48bb78; }
+.iq-score-avg { color: #ed8936; }
+.iq-score-poor { color: #f56565; }
