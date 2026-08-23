@@ -176,8 +176,6 @@ export default function Profile() {
 
   const topRecommendations = (profile?.job_recommendations || []).slice(0, 2);
 
-  const publicProfileUrl = `${window.location.origin}/candidate/${idNumber}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=4&color=1F4F78&bgcolor=FFFFFF&data=${encodeURIComponent(publicProfileUrl)}`;
 
   // ── Shared styles ───────────────────────────────────────────────────────
 
@@ -326,7 +324,7 @@ export default function Profile() {
               marginTop: 6,
             }}>Your credential — and the details behind it</p>
           </div>
-          <button 
+          <button
             onClick={() => {
               if (profile?.platform_id) {
                 navigate(`/profile/iq-card/${profile.platform_id}`);
@@ -570,20 +568,6 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Footer: status dot + QR */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                <span className="idcard-status-dot" />
-                {statusLabel}
-              </div>
-              <img
-                src={qrCodeUrl}
-                alt="Scan to view public candidate profile"
-                width={44}
-                height={44}
-                style={{ borderRadius: 6, border: '1px solid var(--color-border)' }}
-              />
-            </div>
           </div>
         </div>
 
