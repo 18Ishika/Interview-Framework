@@ -99,10 +99,9 @@ function App() {
           } />
 
           {/* Public IQ Card */}
-          <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
-
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
+            <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
             <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
