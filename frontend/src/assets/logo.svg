@@ -1,0 +1,31 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bottom-left petal (light blue) -->
+  <g transform="rotate(240 100 100)">
+    <path d="M 100,25
+             C 145,45 148,95 115,120
+             C 108,125 100,120 100,102
+             C 100,120 92,125 85,120
+             C 52,95 55,45 100,25
+             Z" fill="#5C87B8"/>
+  </g>
+
+  <!-- Bottom-right petal (medium blue) -->
+  <g transform="rotate(120 100 100)">
+    <path d="M 100,25
+             C 145,45 148,95 115,120
+             C 108,125 100,120 100,102
+             C 100,120 92,125 85,120
+             C 52,95 55,45 100,25
+             Z" fill="#2C6CA3"/>
+  </g>
+
+  <!-- Top petal (dark navy) -->
+  <g transform="rotate(0 100 100)">
+    <path d="M 100,25
+             C 145,45 148,95 115,120
+             C 108,125 100,120 100,102
+             C 100,120 92,125 85,120
+             C 52,95 55,45 100,25
+             Z" fill="#1F3F5C"/>
+  </g>
+</svg>

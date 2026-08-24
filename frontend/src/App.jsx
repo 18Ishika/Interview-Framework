@@ -20,6 +20,7 @@ import Login from './pages/login';
 import Signup from './pages/signup';
 import AppLayout from './layouts/AppLayout';
 import Dashboard from './pages/Dashboard';
+import IQCardPage from './pages/IQCardPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -97,8 +98,10 @@ function App() {
             <ProtectedRoute><InterviewResults /></ProtectedRoute>
           } />
 
+          {/* Public IQ Card */}
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
+            <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
             <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
