@@ -42,9 +42,36 @@ export const getResults = (getToken) =>
 
 export const getInterviewStatus = (getToken) =>
   authFetch(`${BASE_URL}/status/`, {}, getToken);
+
 export const fetchQuestionAudio = async (getToken) => {
   const token = await getToken();
   const res = await fetch(`${BASE_URL}/question-audio/`, {
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch audio");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+};
+
+// HR QnA Endpoints
+const HR_BASE_URL = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
+
+export const getHrQuestion = (getToken) =>
+  authFetch(`${HR_BASE_URL}/question/`, {}, getToken);
+
+export const evaluateHrAnswer = (audioBlob, getToken) => {
+  const form = new FormData();
+  form.append("audio", audioBlob, "answer.wav");
+  return authFetch(`${HR_BASE_URL}/evaluate/`, { method: "POST", body: form }, getToken);
+};
+
+export const getHrQnaResults = (getToken) =>
+  authFetch(`${HR_BASE_URL}/results/`, {}, getToken);
+
+export const fetchHrQuestionAudio = async (getToken) => {
+  const token = await getToken();
+  const res = await fetch(`${HR_BASE_URL}/question-audio/`, {
     headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   });

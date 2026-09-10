@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from celery import chord
-from .tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
+from qna_service.tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
 from gtts import gTTS
 import io
 from django.http import HttpResponse
@@ -21,7 +21,7 @@ from .services.pick import (
 )
 from .services.transcription import transcribe
 from .services.scoring import score_answer
-
+from recording_service.services import handle_upload_chunk, handle_finish_upload
 
 @api_view(["POST"])
 @authentication_classes([ClerkAuthentication])
@@ -173,7 +173,7 @@ def get_results_view(request):
             return Response({"error": "No valid audio recordings found to evaluate"}, status=400)
 
         print("Eval task started.")
-        callback_task = finalize_evaluation_chord_task.s(session_id=session_id_str)
+        callback_task = finalize_evaluation_chord_task.s(session_id_str, "tech")
         print("Callback task created.")
         
         # Trigger the chord
@@ -289,5 +289,39 @@ def get_pending_notifications_view(request):
                     })
         
         return Response({"pending": pending})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def upload_chunk_view(request):
+    try:
+        session_id = request.data.get('session_id')
+        chunk_index = request.data.get('chunk_index')
+        chunk = request.FILES.get('chunk')
+
+        if not session_id or chunk_index is None or not chunk:
+            return Response({"error": "Missing required fields"}, status=400)
+
+        result = handle_upload_chunk(session_id, "tech", chunk_index, chunk)
+        return Response(result)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def finish_upload_view(request):
+    try:
+        session_id = request.data.get('session_id')
+        total_chunks = request.data.get('total_chunks')
+
+        if not session_id or total_chunks is None:
+            return Response({"error": "Missing required fields"}, status=400)
+
+        result = handle_finish_upload(session_id, "tech", total_chunks)
+        return Response(result)
     except Exception as e:
         return Response({"error": str(e)}, status=500)

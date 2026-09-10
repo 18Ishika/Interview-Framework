@@ -7,7 +7,7 @@ load_dotenv()
 api_key = os.getenv("GROQ_API_KEY")
 _client = Groq(api_key=api_key)
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
 
 PROMPT_TEMPLATE = """You are a technical interview coach. Below is a list of
 interview questions, the candidate's transcribed spoken answers, and their

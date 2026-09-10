@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     "tech_int",
     "hr_int",
     "coding_round",
+    "recording_service",
+    "qna_service",
 ]
 
 # --- Middleware ---

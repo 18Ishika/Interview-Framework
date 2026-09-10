@@ -10,4 +10,6 @@ urlpatterns = [
     path('question-audio/', views.question_audio, name='question_audio'),
     path('acknowledge/', views.acknowledge_result_view, name='acknowledge_result'),
     path('notifications/pending/', views.get_pending_notifications_view, name='pending_notifications'),
+    path('upload-chunk/', views.upload_chunk_view, name='upload_chunk'),
+    path('finish-upload/', views.finish_upload_view, name='finish_upload'),
 ]
