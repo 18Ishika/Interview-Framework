@@ -130,7 +130,7 @@ export default function IQCardPage() {
 
         <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', width: '100%', maxWidth: '350px' }}>
           <button style={{ ...btnStyle, backgroundColor: '#0077b5', color: '#fff', marginBottom: 0 }} onMouseEnter={e => e.target.style.opacity = '0.9'} onMouseLeave={e => e.target.style.opacity = '1'}>
-            in Share on LinkedIn
+            Share on LinkedIn
           </button>
         </div>
       </div>

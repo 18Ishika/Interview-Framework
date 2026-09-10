@@ -42,38 +42,43 @@ class CodingRound(models.Model):
     def __str__(self):
         return f"CodingRound {self.id} for Session {self.session.id}"
 
-class TechnicalRound(models.Model):
+class BaseInterviewRoundRecording(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="technical_round")
     video_recording = models.URLField(null=True, blank=True)
     audio_recording = ArrayField(models.URLField(), default=list, blank=True)
-    generated_prompt = models.TextField(null=True, blank=True)
-    questions_asked = models.JSONField(default=list, blank=True)
-    ai_evaluation = models.JSONField(default=dict, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     is_result_acknowledged = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        abstract = True
+
+class TechnicalRound(BaseInterviewRoundRecording):
+    session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="technical_round")
+    generated_prompt = models.TextField(null=True, blank=True)
+    questions_asked = models.JSONField(default=list, blank=True)
+    ai_evaluation = models.JSONField(default=dict, blank=True)
+    
+    # New posture/behavior metric fields matching HrRound
+    posture_metric = models.JSONField(default=dict, blank=True)
+    eye_contact_metrics = models.JSONField(default=dict, blank=True)
+    voice_metrics = models.JSONField(default=dict, blank=True)
+
     def __str__(self):
         return f"TechnicalRound {self.id} for Session {self.session.id}"
 
-class HrRound(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+class HrRound(BaseInterviewRoundRecording):
     session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="hr_round")
-    video_recording = models.URLField(null=True, blank=True)
-    audio_recording = ArrayField(models.URLField(), default=list, blank=True)
     transcripts = models.TextField(null=True, blank=True)
     posture_metric = models.JSONField(default=dict, blank=True)
     eye_contact_metrics = models.JSONField(default=dict, blank=True)
     voice_metrics = models.JSONField(default=dict, blank=True)
     qna_metrics = models.JSONField(default=dict, blank=True)
-    started_at = models.DateTimeField(null=True, blank=True)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    is_result_acknowledged = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    
+    # New questions tracking field matching TechnicalRound
+    questions_asked = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"HrRound {self.id} for Session {self.session.id}"

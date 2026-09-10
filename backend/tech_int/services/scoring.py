@@ -7,7 +7,7 @@ load_dotenv()
 api_key = os.getenv("GROQ_API_KEY")
 _client = Groq(api_key=api_key)
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
 
 SCORE_PROMPT = """You are grading a candidate's spoken answer to a technical
 interview question. Judge it purely on conceptual correctness and depth —
