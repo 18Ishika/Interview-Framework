@@ -12,6 +12,7 @@ export default function InterviewResults() {
   const { sessionId, roundType } = location.state || {};
 
   const [report, setReport] = useState(null);
+  const [technicalMetrics, setTechnicalMetrics] = useState(null);
   const [hrData, setHrData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,12 +28,24 @@ export default function InterviewResults() {
           } else {
             setError("Results are not fully evaluated yet.");
           }
-        } else {
+                } else {
           const res = sessionId
             ? await getTechnicalResultsBySession(sessionId, getToken)
             : await getResults(getToken);
-          if (res.status === "completed") {
-            setReport(res.report);
+
+          const rawReport = res.report ?? res.ai_evaluation;
+          const isCompleted = res.status === "completed" || Boolean(res.ai_evaluation);
+
+          if (isCompleted && rawReport) {
+            const parsedReport =
+              typeof rawReport === "string" ? JSON.parse(rawReport) : rawReport;
+            setReport(parsedReport);
+            setTechnicalMetrics({
+              posture_metric: res.posture_metric,
+              eye_contact_metrics: res.eye_contact_metrics,
+              voice_metrics: res.voice_metrics,
+              qna_metrics: parsedReport,
+            });
           } else {
             setError("Results are not fully evaluated yet.");
           }
@@ -123,6 +136,10 @@ export default function InterviewResults() {
           </div>
           <p style={{ color: "#6b7280", marginTop: 4 }}>{report.overall_summary}</p>
         </div>
+
+        {technicalMetrics && (
+          <HrResults metrics={technicalMetrics} reportTitle="Technical Behavior Analysis" />
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {report.per_question_feedback.map((q, idx) => (

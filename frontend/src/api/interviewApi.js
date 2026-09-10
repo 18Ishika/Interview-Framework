@@ -1,4 +1,10 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/tech-int";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_ROOT = configuredApiUrl
+  .replace(/\/$/, "")
+  .replace(/\/(?:tech-int|hr-int|interview)\/?$/, "");
+const BASE_URL = `${API_ROOT}/tech-int`;
+const HR_BASE_URL = `${API_ROOT}/hr-int`;
+const INTERVIEW_SESSIONS_URL = `${API_ROOT}/interview`;
 
 async function authFetch(url, options = {}, getToken) {
   const token = await getToken();
@@ -20,8 +26,7 @@ export const startInterview = (role, getToken) =>
   }, getToken);
 
 export const startHrInterview = (getToken) => {
-  const hrUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
-  return authFetch(`${hrUrl}/start/`, {
+  return authFetch(`${HR_BASE_URL}/start/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -55,8 +60,6 @@ export const fetchQuestionAudio = async (getToken) => {
 };
 
 // HR QnA Endpoints
-const HR_BASE_URL = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
-
 export const getHrQuestion = (getToken) =>
   authFetch(`${HR_BASE_URL}/question/`, {}, getToken);
 
@@ -91,17 +94,11 @@ export const getPendingNotifications = (getToken) =>
   authFetch(`${BASE_URL}/notifications/pending/`, {}, getToken);
 
 export const getHrResults = (sessionId, getToken) => {
-  const hrUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'hr-int') : "http://localhost:8000/api/hr-int";
-  return authFetch(`${hrUrl}/metrics/${sessionId}/`, {}, getToken);
+  return authFetch(`${HR_BASE_URL}/metrics/${sessionId}/`, {}, getToken);
 };
-// Add alongside your existing getResults / getHrResults in interviewApi.js
-// Adjust BASE_URL / header setup to match whatever those two already use.
-const interviewSessionsUrl = import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace('tech-int', 'interview')
-  : "http://localhost:8000/api/interview";
 
 export const getInterviewHistory = (getToken) =>
-  authFetch(`${interviewSessionsUrl}/history/`, {}, getToken);
+  authFetch(`${INTERVIEW_SESSIONS_URL}/history/`, {}, getToken);
 
 export const getTechnicalResultsBySession = (sessionId, getToken) =>
-  authFetch(`${interviewSessionsUrl}/technical/results/${sessionId}/`, {}, getToken);
+  authFetch(`${INTERVIEW_SESSIONS_URL}/technical/results/${sessionId}/`, {}, getToken);

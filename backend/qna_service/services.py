@@ -4,10 +4,11 @@ import os
 import io
 from gtts import gTTS
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# JSON_PATH = os.path.join(BASE_DIR, 'tech_int', 'data', 'Multi_Role_Technical_Interview_Q&A_Dataset.json')
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-with open(r"D:\Sharda\Final Year\Code\Interview-Framework\backend\tech_int\data\Multi_Role_Technical_Interview_Q&A_Dataset.json", 'r') as f:
+JSON_PATH = os.path.join(BACKEND_DIR, "tech_int", "data", "Multi_Role_Technical_Interview_Q&A_Dataset.json")
+
+with open(JSON_PATH, "r", encoding="utf-8") as f:
     QUESTION_DATA = json.load(f)
 
 def get_role_data(role_name: str) -> dict:

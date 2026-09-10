@@ -24,12 +24,25 @@
     );
     }
 
-    export default function HrResults({ metrics }) {
-    const posture = metrics.posture_metric || {};
-    const gaze = metrics.eye_contact_metrics || {};
+    function parseJson(value, fallback) {
+    if (!value) return fallback;
+    if (typeof value === "object") return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+    }
+
+    export default function HrResults({ metrics, reportTitle = "HR Interview Report" }) {
+    const posture = parseJson(metrics.posture_metric, {});
+    const gaze = parseJson(metrics.eye_contact_metrics, {});
     const blink = gaze.blink || {};
     const headPose = posture.head_pose || {};
-    const overallScore = metrics.qna_metrics?.overall_visual_confidence_score;
+    const qna = parseJson(metrics.qna_metrics, {});
+    const voice = parseJson(metrics.voice_metrics, {});
+    const overallScore = qna.overall_visual_confidence_score ?? voice.overall_visual_confidence_score;
+    const qnaFeedback = Array.isArray(qna.per_question_feedback) ? qna.per_question_feedback : [];
 
     return (
         <div style={{ maxWidth: 480, margin: "0 auto", textAlign: "left" }}>
@@ -54,6 +67,29 @@
             <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 8 }}>
             Facing camera {headPose.facing_camera_pct}% of the time
             </p>
+        )}
+
+        {qna.overall_rating && (
+            <div style={{ marginTop: 28, borderTop: "1px solid var(--color-bg-tertiary)", paddingTop: 20 }}>
+            <h3 style={{ marginBottom: 6 }}>{reportTitle}</h3>
+            <strong>{qna.overall_rating}</strong>
+            {qna.overall_summary && (
+                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 6 }}>
+                {qna.overall_summary}
+                </p>
+            )}
+
+            {qnaFeedback.map((item, index) => (
+                <div key={`${item.question || "question"}-${index}`} style={{ marginTop: 16 }}>
+                <p style={{ fontWeight: 600, marginBottom: 5 }}>
+                    Q{index + 1}. {item.question}
+                </p>
+                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>
+                    <strong>{item.verdict}:</strong> {item.feedback}
+                </p>
+                </div>
+            ))}
+            </div>
         )}
         </div>
     );
