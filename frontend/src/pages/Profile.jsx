@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { API_BASE, SERVER_BASE } from '../lib/config';
@@ -8,16 +8,50 @@ export default function Profile() {
   const navigate = useNavigate();
   const { getToken } = useAuth();
   const { user } = useUser();
+  const photoInputRef = useRef(null);
+  const resumeInputRef = useRef(null);
 
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_profile_details');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed.user ? { ...parsed.user, job_recommendations: parsed.job_recommendations, scores: parsed.scores } : parsed;
+      }
+    } catch (e) {}
+    return null;
+  });
   const [resume, setResume] = useState(null);
-  const [photo, setPhoto] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !sessionStorage.getItem('cached_profile_details'));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [skills, setSkills] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [education, setEducation] = useState([]);
+  const [skills, setSkills] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_profile_details');
+      if (cached) return JSON.parse(cached).skills || [];
+    } catch (e) {}
+    return [];
+  });
+  const [projects, setProjects] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_profile_details');
+      if (cached) {
+        const p = JSON.parse(cached).projects;
+        if (p) return p.map(item => ({ ...item, editing: false }));
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [education, setEducation] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('cached_profile_details');
+      if (cached) {
+        const ed = JSON.parse(cached).education;
+        if (ed) return ed.map(item => ({ text: item, editing: false }));
+      }
+    } catch (e) {}
+    return [];
+  });
   const [parsing, setParsing] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   const [showSkillInput, setShowSkillInput] = useState(false);
@@ -25,11 +59,13 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = await getToken({ skipCache: true });
+        const token = await getToken();
         const res = await fetch(`${API_BASE}/user/profile-details/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
+
+        sessionStorage.setItem('cached_profile_details', JSON.stringify(data));
 
         if (data.user) {
           setProfile({ ...data.user, job_recommendations: data.job_recommendations, scores: data.scores });
@@ -72,14 +108,22 @@ export default function Profile() {
     }
   };
 
-  const handleSave = async () => {
+  const handleAvatarClick = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.click();
+    }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setSaving(true);
     setMessage('');
     try {
-      const token = await getToken({ skipCache: true });
+      sessionStorage.removeItem('cached_profile_details');
+      const token = await getToken();
       const formData = new FormData();
-      if (resume) formData.append('resume', resume);
-      if (photo) formData.append('profile_img', photo);
+      formData.append('profile_img', file);
 
       const res = await fetch(`${API_BASE}/user/profile/`, {
         method: 'PATCH',
@@ -87,7 +131,33 @@ export default function Profile() {
         body: formData,
       });
       const data = await res.json();
-      setProfile(data);
+      const updatedData = data.data || data.user || data;
+      setProfile(prev => ({ ...prev, ...updatedData }));
+      setMessage('Profile photo updated successfully!');
+    } catch (err) {
+      setMessage('Failed to update profile photo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      sessionStorage.removeItem('cached_profile_details');
+      const token = await getToken();
+      const formData = new FormData();
+      if (resume) formData.append('resume', resume);
+
+      const res = await fetch(`${API_BASE}/user/profile/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      const updatedData = data.data || data.user || data;
+      setProfile(prev => ({ ...prev, ...updatedData }));
       setMessage('Profile updated successfully!');
       if (resume) await parseResume(resume, token);
     } catch (err) {
@@ -149,11 +219,11 @@ export default function Profile() {
       ? `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
       : (user?.fullName || 'Your Name');
 
-  const idNumber = 'IQ-' + (user?.id || profile?.id || '000000')
+  const idNumber = profile?.platform_id || profile?.data?.platform_id || ('IQ-' + (user?.id || profile?.id || '000000')
     .toString()
     .replace(/[^a-zA-Z0-9]/g, '')
     .slice(-6)
-    .toUpperCase();
+    .toUpperCase());
 
   const issuedDate = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -225,7 +295,7 @@ export default function Profile() {
     transition: 'background 0.15s, border-color 0.15s',
   };
 
-  const saveDisabled = saving || (!resume && !photo);
+  const saveDisabled = saving || !resume;
 
   const cardStyle = {
     background: 'var(--color-bg-secondary)',
@@ -348,49 +418,201 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Left: uploads · Right: minimal ID card */}
-        <div className="top-grid" style={{ marginBottom: 24 }}>
+        {/* Main Profile Box */}
+        <div style={{
+          background: 'var(--color-bg-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-md)',
+          padding: '24px',
+          marginBottom: 24,
+        }}>
+          {/* Hidden file input for photo upload */}
+          <input
+            type="file"
+            ref={photoInputRef}
+            accept="image/*"
+            onChange={handlePhotoChange}
+            style={{ display: 'none' }}
+          />
 
-          {/* LEFT COLUMN */}
-          <div className="left-col">
-            {/* Resume + Save */}
-            <div style={cardStyle}>
-              <h2 style={{ ...sectionHeadingStyle, marginBottom: 16 }}>Resume</h2>
+          {/* Top row: photo + identity + status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div
+              onClick={handleAvatarClick}
+              title="Click to change profile picture"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: 'var(--color-bg-tertiary)',
+                border: '2px solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'border-color 0.2s, transform 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--color-primary-dark)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              {profile?.profile_img_url ? (
+                <img src={profile.profile_img_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: 22, color: 'var(--color-text-muted)' }}>👤</span>
+              )}
+            </div>
 
-              <div style={{ marginBottom: 24 }}>
-                <label style={{
-                  display: 'block',
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 16,
+                fontWeight: 700,
+                color: 'var(--color-text-primary)',
+                overflowWrap: 'anywhere',
+                lineHeight: 1.2,
+              }}>
+                {displayName}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                {roleLabel}
+              </div>
+            </div>
+
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              padding: '4px 8px',
+              borderRadius: 'var(--radius-full)',
+              background: isReady ? 'rgba(63,168,115,0.12)' : 'rgba(217,164,65,0.14)',
+              color: isReady ? 'var(--color-success)' : 'var(--color-warning)',
+              flexShrink: 0,
+            }}>
+              {statusLabel}
+            </span>
+          </div>
+
+          <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '14px 0' }} />
+
+          {/* ID + member since */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 14 }}>
+            <span>ID · <span style={{ fontFamily: 'monospace', color: 'var(--color-text-secondary)' }}>{idNumber}</span></span>
+            <span>Since {issuedDate}</span>
+          </div>
+
+          {/* Job Recommendations (top 2) */}
+          {topRecommendations.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6 }}>
+                Top Matches
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {topRecommendations.map((rec, i) => (
+                  <span key={i} style={chipStyle}>{rec.job}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Ready score */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+              <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                Ready Score
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)' }}>{readyScore}%</span>
+            </div>
+            <div className="idcard-progress-track">
+              <div className="idcard-progress-fill" style={{ width: `${readyScore}%` }} />
+            </div>
+          </div>
+
+          <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '16px 0' }} />
+
+          {/* Resume Upload Section embedded in main profile box */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <label style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--color-text-primary)',
+              }}>
+                Resume (PDF / DOCX)
+              </label>
+              {profile?.resume_url && (
+                <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
+                  ✅ Resume uploaded
+                </span>
+              )}
+            </div>
+
+            <input
+              type="file"
+              ref={resumeInputRef}
+              accept=".pdf,.doc,.docx"
+              onChange={e => setResume(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
+                <button
+                  type="button"
+                  onClick={() => resumeInputRef.current?.click()}
+                  style={{
+                    padding: '8px 14px',
+                    background: 'var(--color-bg-tertiary)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--color-text-primary)',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontFamily: 'var(--font-body)',
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-border-strong)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                >
+                  📁 Choose File
+                </button>
+                <span style={{
                   fontSize: 13,
-                  fontWeight: 500,
-                  color: 'var(--color-text-primary)',
-                  marginBottom: 8,
+                  color: resume ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: 260,
+                  fontFamily: 'var(--font-body)',
                 }}>
-                  Resume (PDF / DOCX)
-                </label>
-                {profile?.resume_url && (
-                  <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                    ✅ Resume uploaded
-                  </p>
-                )}
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={e => setResume(e.target.files[0])}
-                  style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-                />
+                  {resume ? resume.name : 'No file chosen'}
+                </span>
               </div>
 
               <button
                 onClick={handleSave}
                 disabled={saveDisabled}
                 style={{
-                  width: '100%',
-                  padding: '12px',
+                  padding: '8px 16px',
                   background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
                   color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: saveDisabled ? 'not-allowed' : 'pointer',
                   fontFamily: 'var(--font-body)',
@@ -401,173 +623,27 @@ export default function Profile() {
               >
                 {saving ? 'Saving...' : 'Save Profile'}
               </button>
-
-              {message && (
-                <p style={{
-                  marginTop: 16,
-                  textAlign: 'center',
-                  fontSize: 13,
-                  color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
-                }}>
-                  {message}
-                </p>
-              )}
-
-              {parsing && (
-                <p style={{
-                  marginTop: 12,
-                  textAlign: 'center',
-                  fontSize: 13,
-                  color: 'var(--color-text-secondary)',
-                }}>
-                  Extracting skills and projects from your resume...
-                </p>
-              )}
             </div>
 
-            {/* Profile Photo */}
-            <div style={{ ...cardStyle, textAlign: 'center' }}>
-              <label style={{
-                display: 'block',
+            {message && (
+              <p style={{
+                marginTop: 8,
                 fontSize: 13,
-                fontWeight: 500,
-                color: 'var(--color-text-primary)',
-                marginBottom: 16,
+                color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
               }}>
-                Profile Photo
-              </label>
-              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
-                {profile?.profile_img_url ? (
-                  <img
-                    src={`${profile.profile_img_url}`}
-                    alt="Profile"
-                    style={{
-                      width: 88,
-                      height: 88,
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid var(--color-border)',
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    width: 88,
-                    height: 88,
-                    borderRadius: '50%',
-                    background: TINT,
-                    border: '2px solid var(--color-border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 26,
-                    color: 'var(--color-text-muted)',
-                  }}>👤</div>
-                )}
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => setPhoto(e.target.files[0])}
-                style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)', maxWidth: '100%' }}
-              />
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN — minimal ID card */}
-          <div style={{
-            background: 'var(--color-bg-primary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-sm)',
-            padding: '20px',
-          }}>
-            {/* Top row: photo + identity + status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                overflow: 'hidden',
-                flexShrink: 0,
-                background: 'var(--color-bg-tertiary)',
-                border: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                {profile?.profile_img_url ? (
-                  <img src={profile.profile_img_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontSize: 18, color: 'var(--color-text-muted)' }}>👤</span>
-                )}
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: 'var(--color-text-primary)',
-                  overflowWrap: 'anywhere',
-                  lineHeight: 1.2,
-                }}>
-                  {displayName}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                  {roleLabel}
-                </div>
-              </div>
-
-              <span style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius-full)',
-                background: isReady ? 'rgba(63,168,115,0.12)' : 'rgba(217,164,65,0.14)',
-                color: isReady ? 'var(--color-success)' : 'var(--color-warning)',
-                flexShrink: 0,
-              }}>
-                {statusLabel}
-              </span>
-            </div>
-
-            <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '14px 0' }} />
-
-            {/* ID + member since */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 14 }}>
-              <span>ID · <span style={{ fontFamily: 'monospace', color: 'var(--color-text-secondary)' }}>{idNumber}</span></span>
-              <span>Since {issuedDate}</span>
-            </div>
-
-            {/* Job Recommendations (top 2) */}
-            {topRecommendations.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6 }}>
-                  Top Matches
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {topRecommendations.map((rec, i) => (
-                    <span key={i} style={chipStyle}>{rec.job}</span>
-                  ))}
-                </div>
-              </div>
+                {message}
+              </p>
             )}
 
-            {/* Ready score */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
-                  Ready Score
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)' }}>{readyScore}%</span>
-              </div>
-              <div className="idcard-progress-track">
-                <div className="idcard-progress-fill" style={{ width: `${readyScore}%` }} />
-              </div>
-            </div>
-
+            {parsing && (
+              <p style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: 'var(--color-text-secondary)',
+              }}>
+                Extracting skills and projects from your resume...
+              </p>
+            )}
           </div>
         </div>
 

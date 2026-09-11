@@ -19,10 +19,17 @@ export default function InterviewHistory() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let timer;
     async function fetchHistory() {
       try {
         const res = await getInterviewHistory(getToken);
-        setHistory(res.history || []);
+        const list = res.history || [];
+        setHistory(list);
+
+        const hasEvaluating = list.some(item => item.tech_status === "evaluating" || item.hr_status === "evaluating");
+        if (hasEvaluating) {
+          timer = setTimeout(fetchHistory, 5000);
+        }
       } catch (err) {
         setError(err.message || "Failed to load history");
       } finally {
@@ -30,6 +37,7 @@ export default function InterviewHistory() {
       }
     }
     fetchHistory();
+    return () => clearTimeout(timer);
   }, [getToken]);
 
   if (loading) {
@@ -80,41 +88,90 @@ export default function InterviewHistory() {
                 </p>
               </div>
 
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {item.technical_rating && (
+              <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                {item.tech_status === "completed" && (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {item.technical_rating && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: ratingColor[item.technical_rating] || "#374151",
+                        }}
+                      >
+                        {item.technical_rating}
+                      </span>
+                    )}
+                    <button
+                      className="is-btn-ghost"
+                      onClick={() =>
+                        navigate("/interview/results", {
+                          state: { sessionId: item.session_id, roundType: "technical" },
+                        })
+                      }
+                    >
+                      View
+                    </button>
+                  </div>
+                )}
+                {item.tech_status === "evaluating" && (
                   <span
                     style={{
                       fontSize: 12,
                       fontWeight: 600,
-                      color: ratingColor[item.technical_rating] || "#374151",
+                      color: "#d97706",
+                      background: "rgba(217, 119, 6, 0.12)",
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    {item.technical_rating}
+                    ⏳ Technical Evaluating...
                   </span>
                 )}
-                {item.tech_status === "completed" && (
-                  <button
-                    className="is-btn-ghost"
-                    onClick={() =>
-                      navigate("/interview/results", {
-                        state: { sessionId: item.session_id, roundType: "technical" },
-                      })
-                    }
-                  >
-                    View
-                  </button>
-                )}
                 {item.hr_status === "completed" && (
-                  <button
-                    className="is-btn-ghost"
-                    onClick={() =>
-                      navigate("/interview/results", {
-                        state: { sessionId: item.session_id, roundType: "hr" },
-                      })
-                    }
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {item.hr_rating && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: ratingColor[item.hr_rating] || "#374151",
+                        }}
+                      >
+                        {item.hr_rating}
+                      </span>
+                    )}
+                    <button
+                      className="is-btn-ghost"
+                      onClick={() =>
+                        navigate("/interview/results", {
+                          state: { sessionId: item.session_id, roundType: "hr" },
+                        })
+                      }
+                    >
+                      View
+                    </button>
+                  </div>
+                )}
+                {item.hr_status === "evaluating" && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#d97706",
+                      background: "rgba(217, 119, 6, 0.12)",
+                      padding: "4px 10px",
+                      borderRadius: 20,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
                   >
-                    View HR
-                  </button>
+                    ⏳ HR Evaluating...
+                  </span>
                 )}
               </div>
             </div>
