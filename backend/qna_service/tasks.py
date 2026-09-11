@@ -102,6 +102,12 @@ def finalize_evaluation_chord_task(self, results, session_id, round_type):
         logger.info(f"[Celery] Saved QnA evaluation and marked Session {session_id} {round_type}_status as completed.")
         
         try:
+            from users.utils.cache_utils import invalidate_user_caches
+            invalidate_user_caches(session.user.id)
+        except Exception as cache_e:
+            logger.error(f"[Celery] Failed to invalidate cache for user {session.user.id}: {cache_e}")
+
+        try:
             from interview_sessions.services.notifier import NotificationService
             NotificationService.notify_user_evaluation_complete(
                 user_id=session.user.clerk_user_id,
