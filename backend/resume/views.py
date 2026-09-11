@@ -122,6 +122,9 @@ class ResumeParseView(APIView):
                 user.recommended_jobs = [role.get("job") for role in recommendations if role["match_percent"]>=33]
                 user.save()
 
+            from users.utils.cache_utils import invalidate_user_profile_cache
+            invalidate_user_profile_cache(user.id)
+
             return Response({
                 "skills": skills,
                 "projects": projects,

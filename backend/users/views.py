@@ -3,11 +3,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from .serializers import UserSerializer
+from django.core.cache import cache
 from .serializers import UserSerializer
 from .utils.api_response import (
     success_response,
     error_response
+)
+from .utils.cache_utils import (
+    get_profile_cache_key,
+    invalidate_user_profile_cache,
+    CACHE_TTL_PROFILE
 )
 
 @api_view(["POST"])
@@ -56,6 +61,7 @@ def profile(request):
             if serializer.is_valid():
 
                 serializer.save()
+                invalidate_user_profile_cache(user.id)
 
                 return success_response(
                     data=serializer.data,
@@ -75,6 +81,10 @@ def profile(request):
 @permission_classes([IsAuthenticated])
 def get_profile_details(request):
     user = request.user
+    cache_key = get_profile_cache_key(user.id)
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return Response(cached_data, status=status.HTTP_200_OK)
 
     user_data = {
         "id": user.id,
@@ -163,7 +173,7 @@ def get_profile_details(request):
         total = (scores["coding"] + scores["tech"] + scores["hr"]) / 3
         scores["overall"] = round(total, 2)
 
-    return Response({
+    response_data = {
         "user": user_data,
         "education": education_data,
         "experience": experience_data,
@@ -171,7 +181,10 @@ def get_profile_details(request):
         "skills": skills_data,
         "scores": scores,
         "job_recommendations": [{"job":job} for job in user.recommended_jobs] or []
-    }, status=status.HTTP_200_OK)
+    }
+
+    cache.set(cache_key, response_data, CACHE_TTL_PROFILE)
+    return Response(response_data, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])

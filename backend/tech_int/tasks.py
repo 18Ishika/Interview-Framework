@@ -74,6 +74,12 @@ def finalize_evaluation_chord_task(self, results, session_id):
         print(f"[Celery] Saved TechnicalRound and marked Session {session_id} as completed.")
         
         try:
+            from users.utils.cache_utils import invalidate_user_caches
+            invalidate_user_caches(interview_session.user.id)
+        except Exception as cache_e:
+            print(f"[Celery] Cache invalidation failed: {cache_e}")
+
+        try:
             from interview_sessions.services.notifier import NotificationService
             NotificationService.notify_user_evaluation_complete(
                 user_id=interview_session.user.clerk_user_id,

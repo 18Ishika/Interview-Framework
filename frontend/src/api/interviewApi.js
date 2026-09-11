@@ -83,12 +83,16 @@ export const fetchHrQuestionAudio = async (getToken) => {
   return URL.createObjectURL(blob);
 };
 
-export const acknowledgeResult = (sessionId, roundType, getToken) =>
-  authFetch(`${BASE_URL}/acknowledge/`, {
+export const acknowledgeResult = (sessionId, roundType, getToken) => {
+  try {
+    sessionStorage.removeItem('cached_profile_details');
+  } catch (e) {}
+  return authFetch(`${BASE_URL}/acknowledge/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ session_id: sessionId, round_type: roundType }),
   }, getToken);
+};
 
 export const getPendingNotifications = (getToken) =>
   authFetch(`${BASE_URL}/notifications/pending/`, {}, getToken);

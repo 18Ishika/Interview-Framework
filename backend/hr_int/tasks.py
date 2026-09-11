@@ -80,6 +80,12 @@ def assemble_and_upload_hr_video_task(self, session_id, total_chunks=None):
         logger.info(f"[Celery] Successfully processed HR video for {session_id}")
 
         try:
+            from users.utils.cache_utils import invalidate_user_caches
+            invalidate_user_caches(session.user.id)
+        except Exception as cache_e:
+            logger.error(f"[Celery] Cache invalidation failed: {cache_e}")
+
+        try:
             from interview_sessions.services.notifier import NotificationService
             NotificationService.notify_user_evaluation_complete(
                 user_id=session.user.clerk_user_id,
