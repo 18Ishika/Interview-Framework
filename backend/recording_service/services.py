@@ -26,9 +26,14 @@ def handle_finish_upload(session_id, round_type, total_chunks):
     Called when all chunks have been uploaded.
     Here we just trigger the Celery task to assemble and process the video.
     """
-    from .tasks import assemble_and_score_video_task
-    
-    # Trigger Celery task
-    assemble_and_score_video_task.delay(session_id, round_type, total_chunks)
+    if round_type == "hr":
+        from hr_int.tasks import assemble_and_upload_hr_video_task
+
+        assemble_and_upload_hr_video_task.delay(session_id, total_chunks)
+    else:
+        from .tasks import assemble_and_score_video_task
+
+        assemble_and_score_video_task.delay(session_id, round_type, total_chunks)
+
     logger.info(f"Triggered assembly task for session {session_id}, round {round_type} ({total_chunks} chunks)")
     return {"status": "success", "message": "Upload assembly started"}

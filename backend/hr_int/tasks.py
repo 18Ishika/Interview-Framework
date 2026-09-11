@@ -64,7 +64,7 @@ def assemble_and_upload_hr_video_task(self, session_id, total_chunks=None):
             hr_round.save(update_fields=["posture_metric", "eye_contact_metrics", "qna_metrics", "is_result_acknowledged"])
             logger.info(f"[Celery] Saved visual behavior metrics for {session_id}")
         except Exception as behavior_error:
-            logger.error(f"[Celery] Visual behavior analysis failed for {session_id}: {str(behavior_error)}")
+            logger.exception(f"[Celery] Visual behavior analysis failed for {session_id}: {behavior_error}")
 
         logger.info(f"[Celery] Uploading assembled video to Cloudinary for {session_id}")
         with open(final_video_path, 'rb') as video_file:

@@ -284,4 +284,7 @@ def get_technical_results_by_session_view(request, session_id):
         "status": "completed",
         "report": tech_round.ai_evaluation,
         "raw_results": tech_round.questions_asked,
+        "posture_metric": tech_round.posture_metric,
+        "eye_contact_metrics": tech_round.eye_contact_metrics,
+        "voice_metrics": tech_round.voice_metrics,
     })

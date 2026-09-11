@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- Security ---
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",") if host.strip()]
 
 # --- Apps ---
 INSTALLED_APPS = [
@@ -95,6 +95,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Vite
     "http://localhost:3000",  # CRA
 ]
+if config("FRONTEND_URL", default=""):
+    CORS_ALLOWED_ORIGINS.append(config("FRONTEND_URL").rstrip("/"))
 CORS_ALLOW_CREDENTIALS = True
 
 # --- Clerk ---
