@@ -1,0 +1,144 @@
+{
+    "Roles": [
+        {
+            "Role": "HR",
+            "Topics": [
+                {
+                    "Topic": "Background, Introduction & Self-Awareness",
+                    "Concepts": [
+                        {
+                            "Concept": "Professional Introduction & Elevator Pitch",
+                            "Questions": [
+                                {
+                                    "Question": "Please walk me through your background and introduce yourself."
+                                },
+                                {
+                                    "Question": "What inspired you to pursue a career in technology and software development?"
+                                },
+                                {
+                                    "Question": "How would your peers and project teammates describe your working style?"
+                                },
+                                {
+                                    "Question": "What is one technical or personal achievement during college that you are most proud of?"
+                                },
+                                {
+                                    "Question": "What are your core interests outside of programming and engineering?"
+                                }
+                            ]
+                        },
+                        {
+                            "Concept": "Strengths, Weaknesses & Self-Appraisal",
+                            "Questions": [
+                                {
+                                    "Question": "What do you consider your greatest professional strength, and how does it help you deliver results?"
+                                },
+                                {
+                                    "Question": "Can you share a genuine weakness you have identified and the steps you are actively taking to improve?"
+                                },
+                                {
+                                    "Question": "How do you handle receiving critical feedback or a poor review on your work?"
+                                },
+                                {
+                                    "Question": "Tell me about a time you failed to meet an academic or project deadline. What happened and what did you learn?"
+                                },
+                                {
+                                    "Question": "How do you evaluate whether a project you worked on was genuinely successful?"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Topic": "Behavioral Competencies & Situational Judgment",
+                    "Concepts": [
+                        {
+                            "Concept": "Teamwork, Collaboration & Conflict Resolution",
+                            "Questions": [
+                                {
+                                    "Question": "Describe a situation where you had a major disagreement with a teammate on a technical decision. How did you resolve it?"
+                                },
+                                {
+                                    "Question": "How do you manage working with team members who are not contributing their fair share to a deliverable?"
+                                },
+                                {
+                                    "Question": "Tell me about a time you had to collaborate with someone whose communication style was very different from yours."
+                                },
+                                {
+                                    "Question": "Can you share an instance where you stepped up to lead or coordinate a group initiative?"
+                                },
+                                {
+                                    "Question": "What role do you naturally assume when placed in a brand-new cross-functional team?"
+                                }
+                            ]
+                        },
+                        {
+                            "Concept": "Adaptability, Stress Management & Problem Solving",
+                            "Questions": [
+                                {
+                                    "Question": "Describe a project where requirements changed unexpectedly midway through. How did you pivot?"
+                                },
+                                {
+                                    "Question": "How do you manage high-pressure situations when multiple exams, deadlines, or deliverables overlap?"
+                                },
+                                {
+                                    "Question": "Tell me about a situation where you had to solve a challenging problem with very little guidance or incomplete information."
+                                },
+                                {
+                                    "Question": "How do you approach learning a completely new programming language, framework, or tool under a tight timeline?"
+                                },
+                                {
+                                    "Question": "Can you describe a time you made an error that affected your team's progress, and how you took accountability for it?"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Topic": "Company Fit, Motivation & Long-Term Vision",
+                    "Concepts": [
+                        {
+                            "Concept": "Company Alignment & Role Motivation",
+                            "Questions": [
+                                {
+                                    "Question": "Why do you want to join our organization specifically, rather than other tech companies?"
+                                },
+                                {
+                                    "Question": "What about this specific entry-level role caught your attention and aligned with your goals?"
+                                },
+                                {
+                                    "Question": "What kind of workplace culture allows you to perform at your highest potential?"
+                                },
+                                {
+                                    "Question": "How do you stay updated with emerging technologies and industry best practices?"
+                                },
+                                {
+                                    "Question": "What unique perspective or asset will you bring to our team on day one?"
+                                }
+                            ]
+                        },
+                        {
+                            "Concept": "Career Vision & Professional Ethics",
+                            "Questions": [
+                                {
+                                    "Question": "Where do you envision your technical and professional career progressing over the next three to five years?"
+                                },
+                                {
+                                    "Question": "Tell me about an ethical dilemma you encountered during your college or work experience, and how you handled it."
+                                },
+                                {
+                                    "Question": "How do you draw boundaries to maintain a sustainable work-life integration during critical project crunches?"
+                                },
+                                {
+                                    "Question": "Are you open to relocation, flexible shifts, or traveling if required by business needs?"
+                                },
+                                {
+                                    "Question": "Do you have any questions for us regarding the team structure, expectations, or growth opportunities?"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

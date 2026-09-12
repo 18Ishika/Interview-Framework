@@ -18,7 +18,7 @@ from recording_service.services import handle_upload_chunk, handle_finish_upload
 from qna_service.services import (
     generate_questions,
     get_current_question,
-    get_current_answer_data,
+    has_active_question,
     advance_question,
     generate_question_audio
 )
@@ -142,20 +142,19 @@ def question_audio(request):
 @permission_classes([IsAuthenticated])
 def evaluate_answer_view(request):
     try:
+        if not has_active_question(request, "hr"):
+            return Response({"error": "No active question found"}, status=400)
+
         audio_file = request.FILES.get("audio")
         if not audio_file:
             return Response({"error": "Audio file is required"}, status=400)
-
-        answer_data = get_current_answer_data(request, "hr")
-        if not answer_data:
-            return Response({"error": "No active question found"}, status=400)
 
         session_id_str = request.session.get('hr_session_id')
         if not session_id_str:
             return Response({"error": "No session active"}, status=400)
 
         current_question = get_current_question(request, "hr")
-        
+
         # Upload audio to Cloudinary
         audio_url = CloudinaryService.upload_audio(audio_file, request.user.id, session_id_str, "hr")
 
@@ -163,7 +162,7 @@ def evaluate_answer_view(request):
             hr_round, _ = HrRound.objects.get_or_create(session_id=session_id_str)
             if not isinstance(hr_round.questions_asked, list):
                 hr_round.questions_asked = []
-            
+
             if not isinstance(hr_round.audio_recording, list):
                 hr_round.audio_recording = []
             hr_round.audio_recording.append(audio_url)
@@ -173,8 +172,6 @@ def evaluate_answer_view(request):
                 "topic": current_question.get('topic'),
                 "concept": current_question.get('concept'),
                 "audio_url": audio_url,
-                "reference": answer_data["answer"],
-                "keywords": answer_data["keywords"],
                 "status": "pending_evaluation"
             })
             hr_round.save()
@@ -187,7 +184,7 @@ def evaluate_answer_view(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
-
+    
 @api_view(["GET"])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
@@ -213,7 +210,7 @@ def get_results_view(request):
         tasks = []
         for q in hr_round.questions_asked:
             if q.get("status") == "pending_evaluation":
-                tasks.append(evaluate_single_answer_task.s(q["audio_url"], q))
+                tasks.append(evaluate_single_answer_task.s(q["audio_url"], q, "hr"))
 
         if tasks:
             callback = finalize_evaluation_chord_task.s(session_id_str, "hr")

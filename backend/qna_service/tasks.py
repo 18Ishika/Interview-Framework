@@ -10,14 +10,14 @@ from tech_int.services.scoring import score_answer
 from tech_int.services.groq_feedback import generate_final_feedback
 
 logger = logging.getLogger(__name__)
+from hr_int.services.hr_scoring import score_hr_answer
 
 @shared_task(bind=True, max_retries=2)
-def evaluate_single_answer_task(self, audio_url, question_context):
+def evaluate_single_answer_task(self, audio_url, question_context, round_type='tech'):
     temp_audio_path = None
     question_text = question_context.get("question", "Unknown Question")
     logger.info(f"[Celery] Starting evaluation task for question: '{question_text}'")
     try:
-        # Download the audio file to a temp file
         fd, temp_audio_path = tempfile.mkstemp(suffix=".webm")
         os.close(fd)
 
@@ -25,15 +25,13 @@ def evaluate_single_answer_task(self, audio_url, question_context):
         req = urllib.request.Request(audio_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req) as response, open(temp_audio_path, 'wb') as out_file:
             out_file.write(response.read())
-        
+
         logger.info("[Celery] Starting transcription...")
         transcript = transcribe(temp_audio_path)
 
-        logger.info("[Celery] Starting scoring...")
-        result = score_answer(
-            candidate=transcript,
-            question=question_text,
-        )
+        logger.info(f"[Celery] Starting scoring ({round_type})...")
+        scorer = score_hr_answer if round_type == 'hr' else score_answer
+        result = scorer(candidate=transcript, question=question_text)
 
         result["transcript"] = transcript
         result["audio_url"] = audio_url
@@ -43,7 +41,6 @@ def evaluate_single_answer_task(self, audio_url, question_context):
         return result
     except Exception as e:
         logger.error(f"[Celery] evaluate_single_answer_task failed for '{question_text}': {e}")
-        # Partial failure handling: return a default fallback result instead of crashing the chord
         return {
             "status": "failed",
             "error": str(e),
@@ -55,7 +52,6 @@ def evaluate_single_answer_task(self, audio_url, question_context):
     finally:
         if temp_audio_path and os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
-
 
 @shared_task(bind=True, max_retries=2)
 def finalize_evaluation_chord_task(self, results, session_id, round_type):

@@ -141,80 +141,48 @@ export default function InterviewResults() {
           <HrResults metrics={technicalMetrics} reportTitle="Technical Behavior Analysis" />
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {report.per_question_feedback.map((q, idx) => (
-            <div
-              key={idx}
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: 10,
-                padding: 16,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: 12,
-                  marginBottom: 8,
-                }}
-              >
-                <p style={{ fontWeight: 600, margin: 0 }}>
-                  Q{idx + 1}. {q.question}
-                </p>
-                <span
-                  style={{
-                    ...verdictStyle(q.verdict),
-                    padding: "2px 10px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {q.verdict}
-                </span>
-              </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+  {report.per_question_feedback.map((q, idx) => (
+    <div key={idx} className="is-qa-card">
+      <div className="is-qa-header">
+        <p className="is-qa-question">
+          Q{idx + 1}. {q.question}
+        </p>
+        <span className="is-verdict-badge" style={verdictStyle(q.verdict)}>
+          {q.verdict}
+        </span>
+      </div>
 
-              <p style={{ color: "#374151", fontSize: 14, marginBottom: 10 }}>{q.feedback}</p>
+      <p className="is-qa-feedback">{q.feedback}</p>
 
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {q.matched_keywords?.map((k) => (
-                  <span
-                    key={k}
-                    style={{
-                      fontSize: 12,
-                      background: "#f0fdf4",
-                      color: "#16a34a",
-                      border: "1px solid #bbf7d0",
-                      borderRadius: 6,
-                      padding: "2px 8px",
-                    }}
-                  >
-                    ✓ {k}
-                  </span>
-                ))}
-                {q.missed_keywords?.map((k) => (
-                  <span
-                    key={k}
-                    style={{
-                      fontSize: 12,
-                      background: "#fef2f2",
-                      color: "#dc2626",
-                      border: "1px solid #fecaca",
-                      borderRadius: 6,
-                      padding: "2px 8px",
-                    }}
-                  >
-                    ✗ {k}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+      {q.matched_keywords?.length > 0 && (
+        <div className="is-kw-section">
+          <div className="is-kw-heading">Key Concepts Covered</div>
+          <div className="is-kw-row">
+            {q.matched_keywords.map((k) => (
+              <span key={k} className="is-kw-tag" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
+                ✓ {k}
+              </span>
+            ))}
+          </div>
         </div>
+      )}
 
+      {q.missed_keywords?.length > 0 && (
+        <div className="is-kw-section">
+          <div className="is-kw-heading">Key Concepts Missed</div>
+          <div className="is-kw-row">
+            {q.missed_keywords.map((k) => (
+              <span key={k} className="is-kw-tag" style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                ✗ {k}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  ))}
+</div>
         <div style={{ display: "flex", gap: "10px", marginTop: 24 }}>
           <button className="is-btn-ghost" onClick={() => navigate("/dashboard")} style={{ flex: 1 }}>
             Back to Dashboard
