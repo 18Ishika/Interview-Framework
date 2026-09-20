@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { API_BASE } from '../lib/config';
-import IQCard from '../components/IQCard/IQCard';
-import logoUrl from '../assets/logo.svg';
+import { API_BASE } from '../../lib/config';
+import IQCard from '../../components/profile/IQCard/IQCard';
+import logoUrl from '../../assets/logo.svg';
 
 export default function IQCardPage() {
   const { platformId } = useParams();

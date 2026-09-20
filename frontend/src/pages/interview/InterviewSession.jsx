@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-import { startHrInterview, evaluateHrAnswer, getHrQnaResults, fetchHrQuestionAudio } from "../api/interviewApi";
-import { useInterviewRecording } from "../hooks/useInterviewRecording";
+import { startInterview, evaluateAnswer, getResults, fetchQuestionAudio } from "../../api/interviewApi";
+import { useInterviewRecording } from "../../hooks/useInterviewRecording";
 import "./InterviewSession.css";
 
 function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit, startAnswerRecording, stopAnswerRecording }) {
@@ -72,14 +72,14 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit, startAns
   );
 }
 
-export default function HrInterviewSession() {
+export default function InterviewSession() {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [phase, setPhase] = useState(location.state?.role ? "loading" : "loading");
+  const [phase, setPhase] = useState(location.state?.role ? "loading" : "redirecting");
   const [question, setQuestion] = useState(null);
-  const [sessionId, setSessionId] = useState(location.state?.sessionId || null);
+  const [sessionId, setSessionId] = useState(location.state?.session_id || null);
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -95,7 +95,7 @@ export default function HrInterviewSession() {
     stopBackgroundVideoRecording,
     startAnswerRecording,
     stopAnswerRecording
-  } = useInterviewRecording(sessionId, "hr", getToken);
+  } = useInterviewRecording(sessionId, "tech", getToken);
 
   useEffect(() => {
     if (videoStream && videoRef.current) {
@@ -105,13 +105,13 @@ export default function HrInterviewSession() {
 
   const playQuestionAudio = async () => {
     try {
-      const url = await fetchHrQuestionAudio(getToken);
+      const url = await fetchQuestionAudio(getToken);
       setQuestionAudioUrl(url);
       new Audio(url).play();
     } catch (e) { console.error("Audio fetch failed", e); }
   };
 
-  const handleStart = async () => {
+  const handleStart = async (role) => {
     setLoading(true); setError(null);
     try {
       const stream = await initCamera();
@@ -119,7 +119,7 @@ export default function HrInterviewSession() {
         throw new Error("Camera initialization failed. Please check permissions.");
       }
       
-      const q = await startHrInterview(getToken);
+      const q = await startInterview(role, getToken);
       setQuestion(q);
       setPhase("question");
       
@@ -139,7 +139,12 @@ export default function HrInterviewSession() {
   }, [sessionId, videoStream, isRecording, isFinishing, startBackgroundVideoRecording]);
 
   useEffect(() => {
-    handleStart();
+    const role = location.state?.role;
+    if (role) {
+      handleStart(role);
+    } else {
+      navigate('/interview/setup', { replace: true });
+    }
     
     return () => {
       // Cleanup hook handles stream stop, but we want to ensure stopBackgroundVideoRecording isn't missed on unmount
@@ -152,12 +157,12 @@ export default function HrInterviewSession() {
   const handleSubmit = async (audioBlob) => {
     setLoading(true); setError(null);
     try {
-      const data = await evaluateHrAnswer(audioBlob, getToken);
+      const data = await evaluateAnswer(audioBlob, getToken);
       if (data.next_question?.round_complete) {
         setPhase("completing");
         await stopBackgroundVideoRecording();
-        await getHrQnaResults(getToken); // Trigger celery evaluation
-        alert("Your HR interview is complete! You will get your results shortly.");
+        await getResults(getToken); // Trigger celery evaluation
+        alert("Your interview is complete! You will get your results within 3-5 mins.");
         navigate('/dashboard');
       } else {
         setQuestion(data.next_question);
@@ -169,7 +174,7 @@ export default function HrInterviewSession() {
 
   const handleExit = async () => {
     await stopBackgroundVideoRecording();
-    navigate('/dashboard');
+    navigate('/interview');
   };
 
   return (
@@ -186,7 +191,7 @@ export default function HrInterviewSession() {
         boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
         zIndex: 1000,
         backgroundColor: '#1E1E1E',
-        border: '2px solid var(--primary)'
+        border: '2px solid var(--primary)' // Assuming there is a var(--primary) defined in the platform colors
       }}>
         {videoStream ? (
           <video
@@ -211,7 +216,7 @@ export default function HrInterviewSession() {
       )}
       {(phase === "loading" || phase === "redirecting") && (
         <div className="is-centered">
-          <h2 className="is-heading">Starting your HR interview…</h2>
+          <h2 className="is-heading">Starting your interview…</h2>
           <p className="is-sub">Setting things up and accessing your camera.</p>
         </div>
       )}

@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import Pusher from 'pusher-js';
 import { getPendingNotifications, acknowledgeResult } from '../api/interviewApi';
-import Hero from '../components/Hero';
-import Features from '../components/Features';
-import HowItWorks from '../components/HowItWorks';
-import DashboardPreview from '../components/DashboardPreview';
+import Hero from '../components/landing/Hero';
+import Features from '../components/landing/Features';
+import HowItWorks from '../components/landing/HowItWorks';
+import DashboardPreview from '../components/landing/DashboardPreview';
 
 export default function Dashboard() {
   const { getToken, userId } = useAuth();

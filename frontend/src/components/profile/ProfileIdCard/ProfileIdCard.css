@@ -1,0 +1,369 @@
+/* ===================================================
+   ProfileIdCard.css
+   Uses the tokens from index.css only (no new colours).
+   Everything inside the card is sized in cqw (1cqw = 1% of the card
+   width), so the card scales as one piece on any screen and the
+   layout never reflows. px values before each cqw value are a
+   fallback for browsers without container query units.
+   =================================================== */
+
+.pid-wrap {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* ---------- Stage: flip perspective + size container ---------- */
+.pid-stage {
+  container-type: inline-size;
+  perspective: 1400px;
+  width: 100%;
+}
+
+.pid-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.586 / 1; /* ISO ID-1 card proportions */
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.pid-card.is-flipped { transform: rotateY(180deg); }
+
+.pid-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4.6cqw;
+  border: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+}
+
+.pid-front {
+  background: linear-gradient(165deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+}
+
+/* Fine diagonal line-work, the way printed IDs carry a security pattern */
+.pid-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(31, 79, 120, 0.035) 0 1px,
+    transparent 1px 7px
+  );
+  pointer-events: none;
+}
+
+.pid-back {
+  transform: rotateY(180deg);
+  background: var(--color-bg-primary);
+}
+
+/* ---------- Lanyard slot ---------- */
+.pid-slot {
+  position: absolute;
+  top: 1.7cqw;
+  left: 50%;
+  width: 11cqw;
+  height: 2.2cqw;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  box-shadow: inset 0 1px 2px rgba(28, 43, 58, 0.35);
+  z-index: 2;
+}
+
+/* ---------- Front: header band ---------- */
+.pid-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 10.5cqw;
+  padding: 3.4cqw 4.4cqw 0;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-dark) 0%,
+    var(--color-primary-mid) 60%,
+    var(--color-primary) 100%
+  );
+  color: var(--color-text-on-primary);
+  flex-shrink: 0;
+}
+
+.pid-brand {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-size: 3.4cqw;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pid-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.1cqw;
+  padding: 0.7cqw 2cqw;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 9px;
+  font-size: 2cqw;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Front: photo + fields ---------- */
+.pid-body {
+  position: relative;
+  display: flex;
+  gap: 4cqw;
+  padding: 3.8cqw 4.4cqw 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.pid-photo {
+  position: relative;
+  flex-shrink: 0;
+  width: 22cqw;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1.6cqw;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.pid-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pid-photo-empty { width: 55%; height: 55%; }
+
+.pid-photo-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1cqw 0;
+  background: rgba(22, 58, 90, 0.82);
+  color: #fff;
+  font-size: 8px;
+  font-size: 1.7cqw;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.pid-photo:hover .pid-photo-hint,
+.pid-photo:focus-visible .pid-photo-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pid-fields {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 2.4cqw 3cqw;
+}
+.pid-field { min-width: 0; }
+.pid-field--wide { grid-column: 1 / -1; }
+
+.pid-field dt {
+  font-size: 8.5px;
+  font-size: 1.8cqw;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5cqw;
+}
+.pid-field dd {
+  margin: 0;
+  font-size: 13px;
+  font-size: 2.8cqw;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+.pid-field dd.pid-name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-size: 4.3cqw;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+.pid-mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Front: footer (barcode + score seal) ---------- */
+.pid-foot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 4.4cqw 3.6cqw;
+  flex-shrink: 0;
+}
+
+.pid-barcode-wrap { width: 36cqw; }
+.pid-barcode {
+  display: block;
+  width: 100%;
+  height: 6cqw;
+}
+.pid-barcode rect { fill: var(--color-text-primary); }
+.pid-barcode-num {
+  display: block;
+  margin-top: 0.8cqw;
+  font-size: 8px;
+  font-size: 1.7cqw;
+  color: var(--color-text-secondary);
+}
+
+.pid-seal {
+  position: relative;
+  width: 12.5cqw;
+  height: 12.5cqw;
+  border-radius: 50%;
+  border: 0.45cqw solid var(--color-primary-dark);
+  color: var(--color-primary-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-8deg);
+  background: rgba(255, 255, 255, 0.6);
+}
+.pid-seal::after {
+  content: '';
+  position: absolute;
+  inset: 0.7cqw;
+  border-radius: 50%;
+  border: 1px dashed currentColor;
+  opacity: 0.55;
+}
+.pid-seal--ready { color: var(--color-success); border-color: var(--color-success); }
+.pid-seal--progress { color: var(--color-warning); border-color: var(--color-warning); }
+.pid-seal--none { color: var(--color-text-muted); border-color: var(--color-border-strong); }
+
+.pid-seal-score {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-size: 2.9cqw;
+  font-weight: 800;
+  line-height: 1;
+}
+.pid-seal-label {
+  margin-top: 0.4cqw;
+  font-size: 7px;
+  font-size: 1.5cqw;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---------- Back ---------- */
+.pid-stripe {
+  height: 9.5cqw;
+  margin-top: 4.5cqw;
+  background: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.pid-back-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2.6cqw;
+  padding: 3.4cqw 4.4cqw 0;
+}
+
+.pid-block h4 {
+  margin: 0 0 1.1cqw;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-size: 1.9cqw;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+}
+
+.pid-chips { display: flex; flex-wrap: wrap; gap: 1.1cqw; }
+.pid-chip {
+  padding: 0.5cqw 1.9cqw;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  font-size: 10px;
+  font-size: 2.15cqw;
+  font-weight: 500;
+  color: var(--color-primary-hover);
+  white-space: nowrap;
+}
+.pid-chip--accent {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+.pid-chip--more { color: var(--color-text-secondary); background: transparent; }
+
+.pid-edu,
+.pid-empty {
+  margin: 0;
+  font-size: 11px;
+  font-size: 2.4cqw;
+  line-height: 1.35;
+}
+.pid-edu { color: var(--color-text-primary); font-weight: 500; }
+.pid-empty { color: var(--color-text-muted); }
+
+.pid-back-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 4cqw;
+  padding: 0 4.4cqw 3.4cqw;
+  flex-shrink: 0;
+}
+.pid-fineprint {
+  font-size: 8px;
+  font-size: 1.7cqw;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  max-width: 46cqw;
+}
+.pid-barcode--small { width: 26cqw; height: 4.6cqw; }
+
+/* ---------- Action row under the card ---------- */
+.pid-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+/* Cards are decorative print objects: keep text selectable off,
+   except the ID number which people copy. */
+.pid-face { user-select: none; }
+.pid-mono { user-select: text; }
