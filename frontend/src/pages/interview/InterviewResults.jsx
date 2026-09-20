@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-import { getResults, getHrResults, getTechnicalResultsBySession } from "../api/interviewApi";
-import HrResults from "../components/HrResults";
+import { getResults, getHrResults, getTechnicalResultsBySession } from "../../api/interviewApi";
+import HrResults from "../../components/interview/HrResults";
 import "./InterviewSession.css";
 
 export default function InterviewResults() {

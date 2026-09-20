@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
-import { API_BASE, SERVER_BASE } from '../lib/config';
-import IQCard from '../components/IQCard/IQCard';
+import { API_BASE, SERVER_BASE } from '../../lib/config';
+import IQCard from '../../components/profile/IQCard/IQCard';
+import ProfileIdCard from '../../components/profile/ProfileIdCard/ProfileIdCard';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -246,6 +247,16 @@ export default function Profile() {
 
   const topRecommendations = (profile?.job_recommendations || []).slice(0, 2);
 
+  const idStatus = isReady ? 'ready' : readyScore === 0 ? 'none' : 'progress';
+
+  // Same four inputs that drive readyScore, listed so the user can see what is missing.
+  const completeness = [
+    { label: 'Resume uploaded', done: !!profile?.resume_url },
+    { label: 'Skills added', done: skills.length > 0 },
+    { label: 'Project added', done: projects.length > 0 },
+    { label: 'Education added', done: education.length > 0 },
+  ];
+
 
   // ── Shared styles ───────────────────────────────────────────────────────
 
@@ -305,18 +316,6 @@ export default function Profile() {
     boxShadow: 'var(--shadow-md)',
   };
 
-  const chipStyle = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '3px 10px',
-    background: TINT,
-    border: `1px solid ${TINT_BORDER}`,
-    borderRadius: 20,
-    fontSize: 11,
-    fontWeight: 500,
-    color: 'var(--color-primary-hover)',
-  };
-
   if (loading) return (
     <div style={{
       minHeight: '100vh',
@@ -339,13 +338,51 @@ export default function Profile() {
       padding: '60px 24px',
     }}>
       <style>{`
-        .idcard-status-dot {
-          display: inline-block;
-          width: 7px;
-          height: 7px;
+        .top-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+          gap: 32px;
+          align-items: start;
+          margin-bottom: 28px;
+        }
+        .profile-side {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .check-list {
+          list-style: none;
+          margin: 16px 0 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .check-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 13px;
+          color: var(--color-text-secondary);
+        }
+        .check-item--done { color: var(--color-text-primary); }
+        .check-mark {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           border-radius: 50%;
+          border: 1.5px solid var(--color-border-strong);
+          font-size: 11px;
+          line-height: 1;
+          color: transparent;
+        }
+        .check-item--done .check-mark {
           background: var(--color-success);
-          margin-right: 6px;
+          border-color: var(--color-success);
+          color: #fff;
         }
         .idcard-progress-track {
           width: 100%;
@@ -360,290 +397,191 @@ export default function Profile() {
           background: var(--color-primary-dark);
           transition: width 0.4s ease;
         }
-        .top-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          align-items: start;
-        }
-        .left-col {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        @media (max-width: 800px) {
-          .top-grid { grid-template-columns: 1fr !important; }
+        @media (max-width: 900px) {
+          .top-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
       <div style={{ maxWidth: 980, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 24,
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              margin: 0,
-            }}>Your Profile</h1>
-            <p style={{
-              color: 'var(--color-text-secondary)',
-              fontSize: 14,
-              marginTop: 6,
-            }}>Your credential — and the details behind it</p>
-          </div>
-          <button
-            onClick={() => {
-              if (profile?.platform_id) {
-                navigate(`/profile/iq-card/${profile.platform_id}`);
-              } else {
-                alert("Platform ID not found. Please wait a moment or reload the page.");
-              }
-            }}
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(90deg, #ff8a00, #e52e71)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 4px 14px 0 rgba(229, 46, 113, 0.39)',
-              transition: 'transform 0.2s',
-            }}
-          >
-            Get your IQ Card
-          </button>
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 24,
+            fontWeight: 700,
+            color: 'var(--color-text-primary)',
+            margin: 0,
+          }}>Your Profile</h1>
+          <p style={{
+            color: 'var(--color-text-secondary)',
+            fontSize: 14,
+            marginTop: 6,
+          }}>Your credential — and the details behind it</p>
         </div>
 
-        {/* Main Profile Box */}
-        <div style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-md)',
-          padding: '24px',
-          marginBottom: 24,
-        }}>
-          {/* Hidden file input for photo upload */}
-          <input
-            type="file"
-            ref={photoInputRef}
-            accept="image/*"
-            onChange={handlePhotoChange}
-            style={{ display: 'none' }}
-          />
-
-          {/* Top row: photo + identity + status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div
-              onClick={handleAvatarClick}
-              title="Click to change profile picture"
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                overflow: 'hidden',
-                flexShrink: 0,
-                background: 'var(--color-bg-tertiary)',
-                border: '2px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'border-color 0.2s, transform 0.2s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--color-primary-dark)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              {profile?.profile_img_url ? (
-                <img src={profile.profile_img_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: 22, color: 'var(--color-text-muted)' }}>👤</span>
-              )}
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 16,
-                fontWeight: 700,
-                color: 'var(--color-text-primary)',
-                overflowWrap: 'anywhere',
-                lineHeight: 1.2,
-              }}>
-                {displayName}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                {roleLabel}
-              </div>
-            </div>
-
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              padding: '4px 8px',
-              borderRadius: 'var(--radius-full)',
-              background: isReady ? 'rgba(63,168,115,0.12)' : 'rgba(217,164,65,0.14)',
-              color: isReady ? 'var(--color-success)' : 'var(--color-warning)',
-              flexShrink: 0,
-            }}>
-              {statusLabel}
-            </span>
-          </div>
-
-          <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '14px 0' }} />
-
-          {/* ID + member since */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 14 }}>
-            <span>ID · <span style={{ fontFamily: 'monospace', color: 'var(--color-text-secondary)' }}>{idNumber}</span></span>
-            <span>Since {issuedDate}</span>
-          </div>
-
-          {/* Job Recommendations (top 2) */}
-          {topRecommendations.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 6 }}>
-                Top Matches
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {topRecommendations.map((rec, i) => (
-                  <span key={i} style={chipStyle}>{rec.job}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Ready score */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-              <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
-                Ready Score
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)' }}>{readyScore}%</span>
-            </div>
-            <div className="idcard-progress-track">
-              <div className="idcard-progress-fill" style={{ width: `${readyScore}%` }} />
-            </div>
-          </div>
-
-          <div style={{ height: 0, borderTop: '1px solid var(--color-border)', margin: '16px 0' }} />
-
-          {/* Resume Upload Section embedded in main profile box */}
+        {/* ID card + resume / completeness */}
+        <div className="top-grid">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <label style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color: 'var(--color-text-primary)',
-              }}>
-                Resume (PDF / DOCX)
-              </label>
-              {profile?.resume_url && (
-                <span style={{ fontSize: 12, color: 'var(--color-success)' }}>
-                  ✅ Resume uploaded
-                </span>
-              )}
-            </div>
-
+            {/* Hidden file input for photo upload */}
             <input
               type="file"
-              ref={resumeInputRef}
-              accept=".pdf,.doc,.docx"
-              onChange={e => setResume(e.target.files[0])}
+              ref={photoInputRef}
+              accept="image/*"
+              onChange={handlePhotoChange}
               style={{ display: 'none' }}
             />
 
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
-                <button
-                  type="button"
-                  onClick={() => resumeInputRef.current?.click()}
-                  style={{
-                    padding: '8px 14px',
-                    background: 'var(--color-bg-tertiary)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--color-text-primary)',
+            <ProfileIdCard
+              name={displayName}
+              role={roleLabel}
+              idNumber={idNumber}
+              issued={issuedDate}
+              status={idStatus}
+              statusLabel={statusLabel}
+              readyScore={readyScore}
+              photoUrl={profile?.profile_img_url}
+              onPhotoClick={handleAvatarClick}
+              skills={skills}
+              recommendations={topRecommendations.map(r => r.job)}
+              education={education.map(e => e.text).filter(Boolean)}
+            >
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  if (profile?.platform_id) {
+                    navigate(`/profile/iq-card/${profile.platform_id}`);
+                  } else {
+                    alert("Platform ID not found. Please wait a moment or reload the page.");
+                  }
+                }}
+              >
+                Get your IQ Card
+              </button>
+            </ProfileIdCard>
+          </div>
+
+          <div className="profile-side">
+
+            {/* Resume upload */}
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                <h2 style={sectionHeadingStyle}>Resume</h2>
+                {profile?.resume_url && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-success)' }}>
+                    Uploaded
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 13, marginBottom: 16 }}>
+                PDF or DOCX. We pull your skills, projects and education from it.
+              </p>
+
+              <input
+                type="file"
+                ref={resumeInputRef}
+                accept=".pdf,.doc,.docx"
+                onChange={e => setResume(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 200 }}>
+                  <button
+                    type="button"
+                    onClick={() => resumeInputRef.current?.click()}
+                    style={{
+                      padding: '8px 14px',
+                      background: 'var(--color-bg-primary)',
+                      border: '1px solid var(--color-border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--color-text-primary)',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                      transition: 'background 0.15s, border-color 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--color-bg-primary)'}
+                  >
+                    Choose file
+                  </button>
+                  <span style={{
                     fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
+                    color: resume ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 220,
                     fontFamily: 'var(--font-body)',
-                    transition: 'background 0.15s, border-color 0.15s',
+                  }}>
+                    {resume ? resume.name : 'No file chosen'}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleSave}
+                  disabled={saveDisabled}
+                  style={{
+                    padding: '8px 16px',
+                    background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
+                    color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: saveDisabled ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-border-strong)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                  onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
+                  onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
                 >
-                  📁 Choose File
+                  {saving ? 'Saving...' : 'Save Profile'}
                 </button>
-                <span style={{
-                  fontSize: 13,
-                  color: resume ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: 260,
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  {resume ? resume.name : 'No file chosen'}
-                </span>
               </div>
 
-              <button
-                onClick={handleSave}
-                disabled={saveDisabled}
-                style={{
-                  padding: '8px 16px',
-                  background: saveDisabled ? 'var(--color-bg-tertiary)' : 'var(--color-primary-dark)',
-                  color: saveDisabled ? 'var(--color-text-muted)' : '#fff',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
+              {message && (
+                <p style={{
+                  marginTop: 12,
                   fontSize: 13,
-                  fontWeight: 600,
-                  cursor: saveDisabled ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-body)',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-hover)'; }}
-                onMouseLeave={e => { if (!saveDisabled) e.currentTarget.style.background = 'var(--color-primary-dark)'; }}
-              >
-                {saving ? 'Saving...' : 'Save Profile'}
-              </button>
+                  color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
+                }}>
+                  {message}
+                </p>
+              )}
+
+              {parsing && (
+                <p style={{ marginTop: 12, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                  Extracting skills and projects from your resume...
+                </p>
+              )}
             </div>
 
-            {message && (
-              <p style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: message.includes('success') ? 'var(--color-success)' : 'var(--color-danger)',
-              }}>
-                {message}
-              </p>
-            )}
+            {/* Ready score breakdown */}
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                <h2 style={sectionHeadingStyle}>Ready score</h2>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>{readyScore}%</span>
+              </div>
+              <div className="idcard-progress-track">
+                <div className="idcard-progress-fill" style={{ width: `${readyScore}%` }} />
+              </div>
+              <ul className="check-list">
+                {completeness.map(item => (
+                  <li key={item.label} className={`check-item${item.done ? ' check-item--done' : ''}`}>
+                    <span className="check-mark" aria-hidden="true">✓</span>
+                    {item.label}
+                    <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+                      {item.done ? ' (done)' : ' (to do)'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-            {parsing && (
-              <p style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: 'var(--color-text-secondary)',
-              }}>
-                Extracting skills and projects from your resume...
-              </p>
-            )}
           </div>
         </div>
 

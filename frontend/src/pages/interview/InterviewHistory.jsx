@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-import { getInterviewHistory } from "../api/interviewApi";
+import { getInterviewHistory } from 	"../../api/interviewApi";
 import "./InterviewSession.css";
 
 const ratingColor = {

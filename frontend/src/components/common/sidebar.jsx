@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import './Sidebar.css';
+import './sidebar.css';
 
 const LOGO_LEAF_PATH = 'M16,16 C11,15 9,9 16,3 C23,9 21,15 16,16 Z';
 
