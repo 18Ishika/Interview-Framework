@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "qna_service",
 ]
 
+
 # --- Middleware ---
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # must be FIRST
@@ -142,3 +143,6 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# --- Judge0 ---
+JUDGE0_URL = config("JUDGE0_URL", default="http://192.168.1.17:2358")
