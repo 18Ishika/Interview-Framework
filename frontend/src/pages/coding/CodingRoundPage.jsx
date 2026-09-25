@@ -9,13 +9,14 @@ import {
   finishCodingRound,
 } from '../../api/codingApi';
 import CodingRoundIntro from './CodingRoundIntro';
+import ReactMarkdown from 'react-markdown';
 import './CodingRoundPage.css';
 
 // ONLY Supported Languages
 const SUPPORTED_LANGUAGES = [
   { key: 'python', label: 'Python (3.8)', monacoLang: 'python' },
-  { key: 'java',   label: 'Java (OpenJDK 13)', monacoLang: 'java' },
-  { key: 'cpp',    label: 'C++ (GCC 9.2)', monacoLang: 'cpp' },
+  { key: 'java', label: 'Java (OpenJDK 13)', monacoLang: 'java' },
+  { key: 'cpp', label: 'C++ (GCC 9.2)', monacoLang: 'cpp' },
 ];
 
 export default function CodingRoundPage() {
@@ -59,7 +60,7 @@ export default function CodingRoundPage() {
     try {
       // 1. Enter Fullscreen
       if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen().catch(() => {});
+        await document.documentElement.requestFullscreen().catch(() => { });
       }
 
       // 2. Fetch or create coding session
@@ -184,7 +185,7 @@ export default function CodingRoundPage() {
   // Re-enter Fullscreen Helper
   const handleReenterFullscreen = () => {
     if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     }
   };
 
@@ -527,8 +528,8 @@ export default function CodingRoundPage() {
             </div>
           </div>
 
-          <div className="problem-pane__content">
-            <div style={{ whiteSpace: 'pre-line' }}>{currentQuestion?.description}</div>
+          <div className="problem-pane__content markdown-content">
+            <ReactMarkdown>{currentQuestion?.description}</ReactMarkdown>
           </div>
         </section>
 
@@ -641,26 +642,24 @@ export default function CodingRoundPage() {
               {/* Overall Status Banner if run/submitted */}
               {testResults && (
                 <div
-                  className={`tc-status-banner ${
-                    testResults.all_passed || testResults.status === 'accepted'
-                      ? 'tc-status-banner--success'
-                      : 'tc-status-banner--error'
-                  }`}
+                  className={`tc-status-banner ${testResults.all_passed || testResults.status === 'accepted'
+                    ? 'tc-status-banner--success'
+                    : 'tc-status-banner--error'
+                    }`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <i
-                      className={`ti ${
-                        testResults.all_passed || testResults.status === 'accepted'
-                          ? 'ti-circle-check'
-                          : 'ti-alert-circle'
-                      }`}
+                      className={`ti ${testResults.all_passed || testResults.status === 'accepted'
+                        ? 'ti-circle-check'
+                        : 'ti-alert-circle'
+                        }`}
                     />
                     <span>
                       {testResults.type === 'submit'
                         ? `Submission Result: ${testResults.passed_count}/${testResults.total_test_cases} Passed (${testResults.score}%)`
                         : testResults.all_passed
-                        ? 'All Sample Test Cases Passed!'
-                        : 'Sample Test Cases Failed'}
+                          ? 'All Sample Test Cases Passed!'
+                          : 'Sample Test Cases Failed'}
                     </span>
                   </div>
                   {testResults.execution_time_ms !== undefined && (
