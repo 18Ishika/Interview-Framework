@@ -1,5 +1,3 @@
-import json
-from datetime import timedelta
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -17,7 +15,6 @@ from .models import (
     TestCaseResult,
     DifficultyChoices,
     LanguageChoices,
-    SubmissionStatusChoices,
 )
 from .services.judge0_service import Judge0Service
 
@@ -79,8 +76,10 @@ def start_coding_round_view(request):
             overall_status="in_progress",
         )
 
-    session.coding_status = "in_progress"
-    session.save(update_fields=["coding_status", "updated_at"])
+    if session.coding_status != "in_progress":
+        session.coding_status = "in_progress"
+        session.save(update_fields=["coding_status", "updated_at"])
+
 
     # 2. Get or create CodingRound
     coding_round, created = CodingRound.objects.get_or_create(session=session)
