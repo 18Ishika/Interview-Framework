@@ -106,3 +106,14 @@ export const getInterviewHistory = (getToken) =>
 
 export const getTechnicalResultsBySession = (sessionId, getToken) =>
   authFetch(`${INTERVIEW_SESSIONS_URL}/technical/results/${sessionId}/`, {}, getToken);
+
+// AI-generated executive summary spanning whichever rounds are done —
+// see get_full_report_view in interview_sessions/views.py.
+export const getFullReport = (sessionId, getToken) =>
+  authFetch(`${INTERVIEW_SESSIONS_URL}/full-report/${sessionId}/`, {}, getToken);
+
+// Reuses the same authFetch (token + credentials + error handling) instead
+// of a separate raw fetch, and the same API_ROOT the rest of this file
+// already derives — so this can't drift out of sync with your other calls.
+export const getProfileDetails = (getToken) =>
+  authFetch(`${API_ROOT}/user/profile-details/`, {}, getToken);

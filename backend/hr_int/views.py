@@ -106,12 +106,14 @@ def get_hr_behavior_metrics(request, session_id):
         return Response({"error": "HrRound not found for this session_id"}, status=404)
 
     return Response({
-        "session_id": str(session_id),
-        "hr_status": hr_round.session.hr_status,
-        "posture_metric": hr_round.posture_metric,
-        "eye_contact_metrics": hr_round.eye_contact_metrics,
-        "qna_metrics": hr_round.qna_metrics,
-    }, status=200)
+    "session_id": str(session_id),
+    "hr_status": hr_round.session.hr_status,
+    "posture_metric": hr_round.posture_metric,
+    "eye_contact_metrics": hr_round.eye_contact_metrics,
+    "qna_metrics": hr_round.qna_metrics,
+    "started_at": hr_round.started_at,
+    "submitted_at": hr_round.submitted_at,
+})
 
 @api_view(["GET"])
 @authentication_classes([ClerkAuthentication])

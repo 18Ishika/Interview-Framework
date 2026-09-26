@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.decorators import authentication_classes
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
+from tech_int.services.groq_feedback import generate_executive_summary
 from users.authentication import ClerkAuthentication
 from django.utils import timezone
 from .models import Session, TechnicalRound, HrRound
@@ -280,11 +281,58 @@ def get_technical_results_by_session_view(request, session_id):
         return Response({"status": "evaluating", "message": "Evaluation in progress"})
 
     return Response({
-        "message": "Evaluation completed",
+    "message": "Evaluation completed",
+    "status": "completed",
+    "report": tech_round.ai_evaluation,
+    "raw_results": tech_round.questions_asked,
+    "posture_metric": tech_round.posture_metric,
+    "eye_contact_metrics": tech_round.eye_contact_metrics,
+    "voice_metrics": tech_round.voice_metrics,
+    "target_role": tech_round.session.target_role,
+    "started_at": tech_round.started_at,
+    "submitted_at": tech_round.submitted_at,
+})
+
+
+@api_view(["GET"])
+@authentication_classes([ClerkAuthentication])
+@permission_classes([IsAuthenticated])
+def get_full_report_view(request, session_id):
+    """
+    GET /api/interview/full-report/<session_id>/
+ 
+    Returns one combined payload for the report header: an AI-generated
+    executive summary spanning whichever rounds are complete, plus each
+    round's score so the frontend doesn't have to fetch technical and HR
+    separately and stitch a summary together itself.
+    """
+    try:
+        session = Session.objects.get(id=session_id, user=request.user)
+    except Session.DoesNotExist:
+        return Response({"error": "Session not found"}, status=404)
+ 
+    tech_round = getattr(session, "technical_round", None)
+    hr_round = getattr(session, "hr_round", None)
+ 
+    tech_eval = tech_round.ai_evaluation if (tech_round and tech_round.ai_evaluation) else None
+    hr_eval = hr_round.qna_metrics if (hr_round and hr_round.qna_metrics) else None
+ 
+    if not tech_eval and not hr_eval:
+        return Response({"status": "evaluating", "message": "No completed rounds yet"})
+ 
+    exec_summary = generate_executive_summary(tech_eval, hr_eval, coding_eval=None)
+ 
+    section_scores = []
+    if tech_eval and tech_eval.get("overall_rating"):
+        section_scores.append({"label": "Technical", "rating": tech_eval["overall_rating"]})
+    if hr_eval and hr_eval.get("overall_rating"):
+        section_scores.append({"label": "HR", "rating": hr_eval["overall_rating"]})
+ 
+    return Response({
         "status": "completed",
-        "report": tech_round.ai_evaluation,
-        "raw_results": tech_round.questions_asked,
-        "posture_metric": tech_round.posture_metric,
-        "eye_contact_metrics": tech_round.eye_contact_metrics,
-        "voice_metrics": tech_round.voice_metrics,
+        "target_role": session.target_role,
+        "overall_summary": exec_summary["overall_summary"],
+        "strengths": exec_summary.get("strengths", []),
+        "growth_areas": exec_summary.get("growth_areas", []),
+        "section_scores": section_scores,
     })

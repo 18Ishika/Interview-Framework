@@ -115,3 +115,67 @@ def _build_overall_summary(results: list) -> str:
         f"You scored an average of {round(avg * 100, 1)}% across {len(results)} questions — "
         f"{counts['Correct']} strong, {counts['Partial']} partial, {counts['Incorrect']} needing work."
     )
+
+
+EXEC_SUMMARY_PROMPT = """You are writing a short executive summary for a
+candidate's interview report, combining results from up to three rounds:
+Technical, HR/Behavioral, and Coding.
+
+Write 2-4 sentences that read like a hiring-panel summary: overall
+impression, one or two standout strengths, and one growth area if the data
+supports it. Be specific but do not just restate the numeric scores.
+
+Return STRICT JSON only, no markdown, no backticks:
+{{
+  "overall_summary": "2-4 sentence executive summary",
+  "strengths": ["short phrase", "short phrase"],
+  "growth_areas": ["short phrase"]
+}}
+
+Round data (any round may be missing — only reference rounds that are present):
+{data}
+"""
+
+def generate_executive_summary(technical_eval: dict | None, hr_eval: dict | None, coding_eval: dict | None = None) -> dict:
+    """
+    Combines whichever round evaluations exist into one narrative summary
+    for the top of the full report. Call this once both/all requested
+    rounds are complete — not from generate_final_feedback(), which only
+    knows about a single round at a time.
+    """
+    rounds_present = {
+        "technical": technical_eval and {
+            "rating": technical_eval.get("overall_rating"),
+            "summary": technical_eval.get("overall_summary"),
+        },
+        "hr": hr_eval and {
+            "rating": hr_eval.get("overall_rating"),
+            "summary": hr_eval.get("overall_summary"),
+        },
+        "coding": coding_eval,
+    }
+    rounds_present = {k: v for k, v in rounds_present.items() if v}
+
+    if not rounds_present:
+        return {"overall_summary": "No rounds completed yet.", "strengths": [], "growth_areas": []}
+
+    prompt = EXEC_SUMMARY_PROMPT.format(data=json.dumps(rounds_present, ensure_ascii=False))
+
+    try:
+        response = _client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(response.choices[0].message.content)
+        if isinstance(parsed, dict) and "overall_summary" in parsed:
+            return parsed
+        print("GROQ WARNING: unexpected exec summary shape:", parsed)
+    except Exception as e:
+        print("GROQ ERROR (exec summary):", repr(e))
+
+    fallback_summary = " ".join(
+        v["summary"] for v in rounds_present.values() if isinstance(v, dict) and v.get("summary")
+    ) or "Report summary unavailable."
+    return {"overall_summary": fallback_summary, "strengths": [], "growth_areas": []}
