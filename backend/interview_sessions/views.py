@@ -225,25 +225,32 @@ def get_interview_history_view(request):
                 "target_role": session.target_role,
                 "tech_status": tech_state,
                 "hr_status": hr_state,
+                "coding_status": session.coding_status,
+                "created_at": session.created_at,
             }
 
-            if tech_state == "completed" and hasattr(session, "technical_round"):
+            if tech_state in ["completed", "evaluating"] and hasattr(session, "technical_round"):
                 tech_round = session.technical_round
-                entry["technical_rating"] = tech_round.ai_evaluation.get("overall_rating")
-                entry["technical_summary"] = tech_round.ai_evaluation.get("overall_summary")
-                entry["technical_submitted_at"] = tech_round.submitted_at or tech_round.created_at
-            elif tech_state == "evaluating" and hasattr(session, "technical_round"):
-                tech_round = session.technical_round
-                entry["technical_submitted_at"] = tech_round.submitted_at or tech_round.created_at
+                if tech_state == "completed" and tech_round.ai_evaluation:
+                    entry["technical_rating"] = tech_round.ai_evaluation.get("overall_rating")
+                    entry["technical_summary"] = tech_round.ai_evaluation.get("overall_summary")
+                entry["technical_submitted_at"] = tech_round.submitted_at or tech_round.created_at or session.created_at
 
-            if hr_state == "completed" and hasattr(session, "hr_round"):
+            if hr_state in ["completed", "evaluating"] and hasattr(session, "hr_round"):
                 hr_round = session.hr_round
-                entry["hr_rating"] = hr_round.qna_metrics.get("overall_rating")
-                entry["hr_summary"] = hr_round.qna_metrics.get("overall_summary")
-                entry["hr_submitted_at"] = hr_round.submitted_at or hr_round.created_at
-            elif hr_state == "evaluating" and hasattr(session, "hr_round"):
-                hr_round = session.hr_round
-                entry["hr_submitted_at"] = hr_round.submitted_at or hr_round.created_at
+                if hr_state == "completed" and hr_round.qna_metrics:
+                    entry["hr_rating"] = hr_round.qna_metrics.get("overall_rating")
+                    entry["hr_summary"] = hr_round.qna_metrics.get("overall_summary")
+                entry["hr_submitted_at"] = hr_round.submitted_at or hr_round.created_at or session.created_at
+
+            if session.coding_status == "completed":
+                if hasattr(session, "coding_round"):
+                    c_round = session.coding_round
+                    entry["coding_score"] = c_round.total_score
+                    entry["coding_submitted_at"] = c_round.submitted_at or c_round.created_at or session.created_at
+                else:
+                    entry["coding_score"] = 0
+                    entry["coding_submitted_at"] = session.created_at
 
             history.append(entry)
 
