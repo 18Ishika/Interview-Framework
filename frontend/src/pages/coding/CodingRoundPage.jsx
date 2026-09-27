@@ -357,13 +357,13 @@ export default function CodingRoundPage() {
 
         {/* Already Completed Modal */}
         {showAlreadyCompletedModal && (
-          <div className="security-warning-overlay">
-            <div className="security-modal">
-              <div className="security-modal__icon" style={{ color: '#f59e0b' }}>
+          <div className="session-modal-overlay">
+            <div className="session-modal-card">
+              <div className="session-modal-icon">
                 <i className="ti ti-circle-check" />
               </div>
-              <h2 className="security-modal__title">Round Already Completed</h2>
-              <p className="security-modal__text">
+              <h2 className="session-modal-title">Round Already Completed</h2>
+              <p className="session-modal-text">
                 {alreadyCompletedInfo?.message ||
                   'You have already completed the Coding Round for this interview session.'}
               </p>
@@ -372,66 +372,42 @@ export default function CodingRoundPage() {
               {alreadyCompletedInfo && (
                 <div className="session-status-list">
                   <div className="session-status-row">
-                    <span>Coding Round</span>
-                    <span className={`status-pill status-pill--${alreadyCompletedInfo.coding_status}`}>
+                    <span className="session-status-label">Coding Round</span>
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.coding_status}`}>
                       {alreadyCompletedInfo.coding_status}
                     </span>
                   </div>
                   <div className="session-status-row">
-                    <span>Technical Round</span>
-                    <span className={`status-pill status-pill--${alreadyCompletedInfo.tech_status}`}>
+                    <span className="session-status-label">Technical Round</span>
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.tech_status}`}>
                       {alreadyCompletedInfo.tech_status}
                     </span>
                   </div>
                   <div className="session-status-row">
-                    <span>HR Round</span>
-                    <span className={`status-pill status-pill--${alreadyCompletedInfo.hr_status}`}>
+                    <span className="session-status-label">HR Round</span>
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.hr_status}`}>
                       {alreadyCompletedInfo.hr_status}
                     </span>
                   </div>
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="session-modal-actions">
                 <button
+                  className="session-btn-primary"
                   onClick={() => navigate('/interview')}
-                  style={{
-                    padding: '12px 20px',
-                    background: '#2563eb',
-                    border: 'none',
-                    color: '#ffffff',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                  }}
                 >
                   Continue Remaining Rounds (Technical / HR)
                 </button>
                 <button
+                  className="session-btn-secondary"
                   onClick={() => navigate('/interview/history')}
-                  style={{
-                    padding: '12px 20px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    color: '#e2e8f0',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
                 >
                   View History
                 </button>
-
                 <button
+                  className="session-btn-close"
                   onClick={() => setShowAlreadyCompletedModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#94a3b8',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    marginTop: '4px',
-                  }}
                 >
                   Close
                 </button>
@@ -777,15 +753,15 @@ export default function CodingRoundPage() {
               {testResults && (
                 <div
                   className={`tc-status-banner ${testResults.all_passed || testResults.status === 'accepted'
-                    ? 'tc-status-banner--success'
-                    : 'tc-status-banner--error'
+                      ? 'tc-status-banner--success'
+                      : 'tc-status-banner--error'
                     }`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <i
                       className={`ti ${testResults.all_passed || testResults.status === 'accepted'
-                        ? 'ti-circle-check'
-                        : 'ti-alert-circle'
+                          ? 'ti-circle-check'
+                          : 'ti-alert-circle'
                         }`}
                     />
                     <span>

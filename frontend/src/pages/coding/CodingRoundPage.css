@@ -760,7 +760,7 @@
 .session-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(6px);
   z-index: 99999;
   display: flex;
@@ -777,31 +777,31 @@
   max-width: 440px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15), 0 0 1px rgba(15, 23, 42, 0.1);
-  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
+  animation: sessionModalFadeIn 0.2s ease-out;
 }
 
-@keyframes modalScaleIn {
+@keyframes sessionModalFadeIn {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 
 .session-modal-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 16px auto;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 16px;
   border-radius: 50%;
-  background: #edf5fd;
+  background: #edf5fc;
   color: #1f4f78;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 26px;
 }
 
 .session-modal-title {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: #1c2b3a;
   margin-bottom: 8px;
 }
@@ -835,10 +835,10 @@
 .session-status-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: #1c2b3a;
 }
 
-.status-pill {
+.session-status-pill {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -847,21 +847,22 @@
   border-radius: 999px;
 }
 
-.status-pill--completed {
+.session-status-pill--completed {
   background: #def7ec;
   color: #03543f;
 }
 
-.status-pill--in_progress {
+.session-status-pill--in_progress {
   background: #e1effe;
   color: #1e429f;
 }
 
-.status-pill--pending {
+.session-status-pill--pending {
   background: #f1f5f9;
   color: #64748b;
 }
 
+/* Modal Action Buttons */
 .session-modal-actions {
   display: flex;
   flex-direction: column;
@@ -875,7 +876,7 @@
   color: #ffffff;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -887,7 +888,7 @@
 .session-btn-secondary {
   padding: 11px 20px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7d2dc;
   color: #1f4f78;
   border-radius: 8px;
   font-size: 14px;
@@ -897,14 +898,14 @@
 }
 
 .session-btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
+  background: #f4f7fa;
+  border-color: #1f4f78;
 }
 
 .session-btn-close {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #94a3b3;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -913,8 +914,7 @@
 }
 
 .session-btn-close:hover {
-  color: #1e293b;
+  color: #1c2b3a;
   text-decoration: underline;
 }
-
 
