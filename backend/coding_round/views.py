@@ -56,29 +56,56 @@ def start_coding_round_view(request):
     """
     POST /api/coding-round/start/
 
-    1. Checks the user's most recent interview session.
-    2. If coding_status is 'pending' or 'in_progress', reuses that session.
-       Otherwise creates a new session.
-    3. Initializes CodingRound and assigns Easy, Medium, Hard questions.
+    Round Flexibility Logic:
+    1. Gets user's most recent interview session from DB.
+    2. If all round statuses in recent session are 'completed', starts a new session.
+    3. If any round status is 'pending'/'in_progress':
+       - If coding_round was already 'completed' in this session, returns already_completed=True
+         so frontend can show an informative popup.
+       - If coding_round is 'pending'/'in_progress', reuses that session ID to create/resume coding round.
+    4. Supports force_new=True to explicitly create a fresh session if requested.
     """
     user = request.user
+    force_new = request.data.get("force_new", False)
 
-    # 1. Find recent session or create new
     recent_session = Session.objects.filter(user=user).order_by("-created_at").first()
 
-    if recent_session and recent_session.coding_status in ["pending", "in_progress"]:
-        session = recent_session
-    else:
+    session = None
+    if not recent_session or force_new:
         session = Session.objects.create(
             user=user,
             target_role=recent_session.target_role if recent_session else "Software Engineer",
             coding_status="in_progress",
             overall_status="in_progress",
         )
+    else:
+        if recent_session.is_all_completed():
+            # All rounds of the last session are finished -> Start fresh session
+            session = Session.objects.create(
+                user=user,
+                target_role=recent_session.target_role or "Software Engineer",
+                coding_status="in_progress",
+                overall_status="in_progress",
+            )
+        else:
+            # Candidate attempted a round that is already completed in active session
+            if recent_session.coding_status == "completed":
+                return Response({
+                    "success": False,
+                    "already_completed": True,
+                    "message": "You have already completed the Coding Round for this interview session. Please proceed to the remaining rounds (Technical or HR) to complete your interview.",
+                    "session_id": str(recent_session.id),
+                    "coding_status": recent_session.coding_status,
+                    "tech_status": recent_session.tech_status,
+                    "hr_status": recent_session.hr_status,
+                }, status=status.HTTP_200_OK)
 
-    if session.coding_status != "in_progress":
-        session.coding_status = "in_progress"
-        session.save(update_fields=["coding_status", "updated_at"])
+
+            # coding_status is 'pending' or 'in_progress' -> Use recent_session
+            session = recent_session
+            session.coding_status = "in_progress"
+            session.save(update_fields=["coding_status", "updated_at"])
+
 
 
     # 2. Get or create CodingRound

@@ -30,19 +30,46 @@ def start_interview_view(request):
             return Response({"error": "Role is required"}, status=400)
 
         if not session_id:
-            session_id = uuid.uuid4()
+            recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
+            if not recent_session or recent_session.is_all_completed():
+                interview_session = Session.objects.create(
+                    id=uuid.uuid4(),
+                    user=request.user,
+                    target_role=role_name,
+                    tech_status="in_progress",
+                    overall_status="in_progress"
+                )
+                session_id = interview_session.id
+            else:
+                if recent_session.tech_status == "completed":
+                    return Response({
+                        "already_completed": True,
+                        "error": "You have already completed the Technical Round for this interview session. Please complete the remaining rounds or review your history.",
+                        "session_id": str(recent_session.id),
+                        "coding_status": recent_session.coding_status,
+                        "tech_status": recent_session.tech_status,
+                        "hr_status": recent_session.hr_status,
+                    }, status=400)
 
-        interview_session, _ = Session.objects.get_or_create(
-            id=session_id,
-            defaults={"user": request.user, "target_role": role_name}
-        )
-        interview_session.tech_status = "in_progress"
-        interview_session.save()
+                interview_session = recent_session
+                interview_session.tech_status = "in_progress"
+                if not interview_session.target_role:
+                    interview_session.target_role = role_name
+                interview_session.save()
+                session_id = interview_session.id
+        else:
+            interview_session, _ = Session.objects.get_or_create(
+                id=session_id,
+                defaults={"user": request.user, "target_role": role_name}
+            )
+            interview_session.tech_status = "in_progress"
+            interview_session.save()
 
         tech_round, _ = TechnicalRound.objects.get_or_create(session=interview_session)
         if not tech_round.started_at:
             tech_round.started_at = timezone.now()
         tech_round.save()
+
 
         request.session['session_id'] = str(session_id)
 

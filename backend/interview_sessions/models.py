@@ -24,8 +24,16 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def is_all_completed(self):
+        return (
+            self.coding_status == "completed" and
+            self.tech_status == "completed" and
+            self.hr_status == "completed"
+        )
+
     def __str__(self):
         return f"Session {self.id} - {self.user.first_name}"
+
 
 class CodingRound(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

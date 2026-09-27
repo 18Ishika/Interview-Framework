@@ -32,18 +32,39 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 def start_hr_interview(request):
     try:
-        session_id = uuid.uuid4()
-        interview_session = Session.objects.create(
-            id=session_id,
-            user=request.user,
-            target_role="HR"
-        )
-        interview_session.hr_status = "in_progress"
-        interview_session.save()
+        recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
+        if not recent_session or recent_session.is_all_completed():
+            session_id = uuid.uuid4()
+            interview_session = Session.objects.create(
+                id=session_id,
+                user=request.user,
+                target_role="HR",
+                hr_status="in_progress",
+                overall_status="in_progress"
+            )
+        else:
+            if recent_session.hr_status == "completed":
+                return Response({
+                    "already_completed": True,
+                    "error": "You have already completed the HR Round for this interview session. Please complete the remaining rounds or review your history.",
+                    "session_id": str(recent_session.id),
+                    "coding_status": recent_session.coding_status,
+                    "tech_status": recent_session.tech_status,
+                    "hr_status": recent_session.hr_status,
+                }, status=400)
 
-        HrRound.objects.create(session=interview_session, started_at=timezone.now())
+            interview_session = recent_session
+            interview_session.hr_status = "in_progress"
+            interview_session.save()
+            session_id = interview_session.id
+
+        hr_round, created = HrRound.objects.get_or_create(session=interview_session)
+        if created or not hr_round.started_at:
+            hr_round.started_at = timezone.now()
+            hr_round.save()
         
         request.session['hr_session_id'] = str(session_id)
+
         
         # Generate QnA for HR
         question = generate_questions(request, role_name="HR", round_type="hr")

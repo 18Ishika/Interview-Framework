@@ -18,8 +18,9 @@ async function authFetch(url, options = {}, getToken) {
   return data;
 }
 
-export const startCodingRound = (getToken) =>
-  authFetch(`${BASE_URL}/start/`, { method: "POST", body: JSON.stringify({}) }, getToken);
+export const startCodingRound = (getToken, payload = {}) =>
+  authFetch(`${BASE_URL}/start/`, { method: "POST", body: JSON.stringify(payload) }, getToken);
+
 
 export const runCodingCode = (payload, getToken) =>
   authFetch(`${BASE_URL}/run/`, { method: "POST", body: JSON.stringify(payload) }, getToken);
