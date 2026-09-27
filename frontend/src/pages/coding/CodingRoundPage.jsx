@@ -42,30 +42,50 @@ export default function CodingRoundPage() {
   const [testResults, setTestResults] = useState(null);
   const [activeCaseIdx, setActiveCaseIdx] = useState(0);
 
-  // Security States
+  // Security & Modal States
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [showSecurityToast, setShowSecurityToast] = useState(false);
   const [securityToastMsg, setSecurityToastMsg] = useState('');
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [finalSummary, setFinalSummary] = useState(null);
 
+  // Already Completed Popup State
+  const [alreadyCompletedInfo, setAlreadyCompletedInfo] = useState(null);
+  const [showAlreadyCompletedModal, setShowAlreadyCompletedModal] = useState(false);
+
   const timerRef = useRef(null);
   const editorRef = useRef(null);
 
+  // Helper to safely exit fullscreen
+  const exitFullscreenSafely = () => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => { });
+    }
+  };
+
   // --- 1. Start Assessment Flow ---
-  const handleStartAssessment = async () => {
+  const handleStartAssessment = async (forceNew = false) => {
     setLoading(true);
     setInitError('');
+    setShowAlreadyCompletedModal(false);
 
     try {
-      // 1. Enter Fullscreen
+      // 1. Fetch or create coding session with round flexibility logic
+      const res = await startCodingRound(getToken, { force_new: forceNew });
+
+      if (res.already_completed) {
+        exitFullscreenSafely();
+        setAlreadyCompletedInfo(res);
+        setShowAlreadyCompletedModal(true);
+        return;
+      }
+
+      if (!res.success) throw new Error(res.error || 'Failed to start coding round');
+
+      // 2. Enter Fullscreen once confirmed starting
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen().catch(() => { });
       }
-
-      // 2. Fetch or create coding session
-      const res = await startCodingRound(getToken);
-      if (!res.success) throw new Error(res.error || 'Failed to start coding round');
 
       setCodingRoundData(res);
       setRemainingSeconds(res.remaining_seconds || 45 * 60);
@@ -146,6 +166,13 @@ export default function CodingRoundPage() {
     };
   }, [phase]);
 
+  // Ensure fullscreen exit when round is completed
+  useEffect(() => {
+    if (phase === 'completed') {
+      exitFullscreenSafely();
+    }
+  }, [phase]);
+
   // --- 3. Countdown Timer ---
   const handleAutoSubmitOnExpire = useCallback(async () => {
     if (!codingRoundData?.coding_round_id) return;
@@ -153,6 +180,7 @@ export default function CodingRoundPage() {
       const res = await finishCodingRound({ coding_round_id: codingRoundData.coding_round_id }, getToken);
       setFinalSummary(res);
       setPhase('completed');
+      exitFullscreenSafely();
     } catch (e) {
       console.error('Auto finish error:', e);
     }
@@ -309,6 +337,7 @@ export default function CodingRoundPage() {
       const res = await finishCodingRound({ coding_round_id: codingRoundData.coding_round_id }, getToken);
       setFinalSummary(res);
       setPhase('completed');
+      exitFullscreenSafely();
     } catch (e) {
       alert('Error finalizing round: ' + e.message);
     } finally {
@@ -319,11 +348,98 @@ export default function CodingRoundPage() {
   // ================= RENDER PHASE 1: INTRO =================
   if (phase === 'intro') {
     return (
-      <CodingRoundIntro
-        onStartAssessment={handleStartAssessment}
-        loading={loading}
-        error={initError}
-      />
+      <>
+        <CodingRoundIntro
+          onStartAssessment={() => handleStartAssessment(false)}
+          loading={loading}
+          error={initError}
+        />
+
+        {/* Already Completed Modal */}
+        {showAlreadyCompletedModal && (
+          <div className="security-warning-overlay">
+            <div className="security-modal">
+              <div className="security-modal__icon" style={{ color: '#f59e0b' }}>
+                <i className="ti ti-circle-check" />
+              </div>
+              <h2 className="security-modal__title">Round Already Completed</h2>
+              <p className="security-modal__text">
+                {alreadyCompletedInfo?.message ||
+                  'You have already completed the Coding Round for this interview session.'}
+              </p>
+
+              {/* Session Status Overview */}
+              {alreadyCompletedInfo && (
+                <div className="session-status-list">
+                  <div className="session-status-row">
+                    <span>Coding Round</span>
+                    <span className={`status-pill status-pill--${alreadyCompletedInfo.coding_status}`}>
+                      {alreadyCompletedInfo.coding_status}
+                    </span>
+                  </div>
+                  <div className="session-status-row">
+                    <span>Technical Round</span>
+                    <span className={`status-pill status-pill--${alreadyCompletedInfo.tech_status}`}>
+                      {alreadyCompletedInfo.tech_status}
+                    </span>
+                  </div>
+                  <div className="session-status-row">
+                    <span>HR Round</span>
+                    <span className={`status-pill status-pill--${alreadyCompletedInfo.hr_status}`}>
+                      {alreadyCompletedInfo.hr_status}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={() => navigate('/interview')}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#2563eb',
+                    border: 'none',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Continue Remaining Rounds (Technical / HR)
+                </button>
+                <button
+                  onClick={() => navigate('/interview/history')}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    color: '#e2e8f0',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View History
+                </button>
+
+                <button
+                  onClick={() => setShowAlreadyCompletedModal(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94a3b8',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    marginTop: '4px',
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -340,8 +456,24 @@ export default function CodingRoundPage() {
             Your coding assessment has been successfully evaluated.
           </p>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', marginBottom: '28px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '28px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '13px',
+                fontWeight: '700',
+                color: '#64748b',
+                textTransform: 'uppercase',
+                marginBottom: '8px',
+              }}
+            >
               Final Round Score
             </div>
             <div style={{ fontSize: '42px', fontWeight: '800', color: '#1F4F78' }}>
@@ -378,9 +510,12 @@ export default function CodingRoundPage() {
   }
 
   // ================= RENDER PHASE 2: WORKSPACE =================
-  const visibleCases = testResults?.type === 'run'
-    ? testResults.results
-    : (testResults?.type === 'submit' ? testResults.test_cases : currentQuestion?.sample_test_cases || []);
+  const visibleCases =
+    testResults?.type === 'run'
+      ? testResults.results
+      : testResults?.type === 'submit'
+        ? testResults.test_cases
+        : currentQuestion?.sample_test_cases || [];
 
   const currentCase = visibleCases?.[activeCaseIdx] || visibleCases?.[0];
 
@@ -455,39 +590,13 @@ export default function CodingRoundPage() {
         </div>
       )}
 
-      {/* --- Top Control Bar --- */}
+      {/* --- Top Control Bar (Clean: Brand, Timer, Finish) --- */}
       <header className="coding-header">
         <div className="coding-header__left">
           <div className="coding-header__brand">
             <i className="ti ti-code" style={{ color: '#4F8AC0', fontSize: '20px' }} />
             <span>Interview<span style={{ color: '#7bb3e8' }}>IQ</span></span>
             <span className="coding-header__brand-tag">PROCTORED</span>
-          </div>
-
-          {/* Question Switcher Tabs */}
-          <div className="coding-header__question-tabs">
-            {codingRoundData?.questions?.map((q, idx) => {
-              const diff = q.difficulty?.toLowerCase();
-              const badgeClass = diff === 'easy' ? 'diff-badge--easy' : diff === 'medium' ? 'diff-badge--medium' : 'diff-badge--hard';
-              return (
-                <button
-                  key={q.round_question_id}
-                  className={`question-tab-btn ${activeQuestionIdx === idx ? 'question-tab-btn--active' : ''}`}
-                  onClick={() => {
-                    setActiveQuestionIdx(idx);
-                    setTestResults(null);
-                  }}
-                >
-                  <span>Q{idx + 1}: {q.title}</span>
-                  <span className={`diff-badge ${badgeClass}`}>{q.difficulty}</span>
-                  {q.score_achieved > 0 && (
-                    <span style={{ fontSize: '11px', color: '#34d399', fontWeight: '700' }}>
-                      ({q.score_achieved}pts)
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
 
@@ -513,8 +622,33 @@ export default function CodingRoundPage() {
 
       {/* --- Main Body: Split Problem / Editor Workspace --- */}
       <div className="coding-body">
-        {/* Left Column: Problem Statement */}
+        {/* Left Column: Problem Statement with Question Selector (1, 2, 3) */}
         <section className="problem-pane">
+          {/* Question Navigator on Left Side */}
+          <div className="problem-pane__question-bar">
+            <span className="problem-pane__question-label">Questions:</span>
+            <div className="problem-pane__question-tabs">
+              {codingRoundData?.questions?.map((q, idx) => {
+                const isSolved = q.score_achieved > 0;
+                return (
+                  <button
+                    key={q.round_question_id}
+                    className={`q-num-tab ${activeQuestionIdx === idx ? 'q-num-tab--active' : ''} ${isSolved ? 'q-num-tab--solved' : ''
+                      }`}
+                    onClick={() => {
+                      setActiveQuestionIdx(idx);
+                      setTestResults(null);
+                    }}
+                    title={`Question ${idx + 1}: ${q.title} (${q.difficulty})`}
+                  >
+                    <span>{idx + 1}</span>
+                    {isSolved && <i className="ti ti-check q-num-check" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="problem-pane__header">
             <h2 className="problem-pane__title">
               <span>{currentQuestion?.title}</span>
@@ -675,7 +809,8 @@ export default function CodingRoundPage() {
                 <div className="testcase-selector">
                   {visibleCases.map((tc, idx) => {
                     const isPassed = tc.passed;
-                    const chipClass = isPassed === true ? 'tc-chip--passed' : isPassed === false ? 'tc-chip--failed' : '';
+                    const chipClass =
+                      isPassed === true ? 'tc-chip--passed' : isPassed === false ? 'tc-chip--failed' : '';
                     return (
                       <button
                         key={tc.test_case_id || idx}
