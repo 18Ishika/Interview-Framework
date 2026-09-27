@@ -135,16 +135,80 @@ export default function InterviewHistory() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {history.map((item) => {
-            const techKey = `${item.session_id}:technical`;
-            const hrKey = `${item.session_id}:hr`;
+          {history.flatMap((session) => {
+            const items = [];
+
+            // 1. Technical Round -> Role
+            if (session.tech_status && session.tech_status !== "pending") {
+              items.push({
+                id: `${session.session_id}-tech`,
+                type: "technical",
+                title: session.target_role && session.target_role.toLowerCase() !== "hr" ? session.target_role : "Technical",
+                dateTime: session.technical_submitted_at || session.created_at,
+                status: session.tech_status,
+                session,
+              });
+            }
+
+            // 2. HR Round -> HR
+            if (session.hr_status && session.hr_status !== "pending") {
+              items.push({
+                id: `${session.session_id}-hr`,
+                type: "hr",
+                title: "HR",
+                dateTime: session.hr_submitted_at || session.created_at,
+                status: session.hr_status,
+                session,
+              });
+            }
+
+            // 3. Coding Round -> Coding
+            if (session.coding_status && session.coding_status !== "pending") {
+              items.push({
+                id: `${session.session_id}-coding`,
+                type: "coding",
+                title: "Coding",
+                dateTime: session.coding_submitted_at || session.created_at,
+                status: session.coding_status,
+                score: session.coding_score,
+                session,
+              });
+            }
+
+            // If none of the specific statuses were non-pending, use target_role/HR fallback
+            if (items.length === 0) {
+              const isHr = session.target_role?.toLowerCase() === "hr";
+              items.push({
+                id: `${session.session_id}-default`,
+                type: isHr ? "hr" : "technical",
+                title: isHr ? "HR" : (session.target_role || "Technical"),
+                dateTime: session.created_at,
+                status: session.overall_status,
+                session,
+              });
+            }
+
+            return items;
+          }).map((round) => {
+            const downloadKey = `${round.session.session_id}:${round.type}`;
+            const formattedDate = round.dateTime
+              ? new Date(round.dateTime).toLocaleString("en-US", {
+                month: "numeric",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              : "";
+
             return (
               <div
-                key={item.session_id}
+                key={round.id}
                 style={{
                   border: "1px solid #e5e7eb",
                   borderRadius: 10,
-                  padding: 16,
+                  padding: "16px 20px",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -153,28 +217,30 @@ export default function InterviewHistory() {
                 }}
               >
                 <div>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{item.target_role || "Interview"}</p>
-                  <p style={{ fontSize: 13, color: "#6b7280", margin: "4px 0 0" }}>
-                    {item.technical_submitted_at &&
-                      `Technical: ${new Date(item.technical_submitted_at).toLocaleDateString()}`}
-                    {item.technical_submitted_at && item.hr_submitted_at && " · "}
-                    {item.hr_submitted_at &&
-                      `HR: ${new Date(item.hr_submitted_at).toLocaleDateString()}`}
+                  <p style={{ fontWeight: 600, fontSize: 15, margin: 0, color: "#1f2937" }}>
+                    {round.title}
                   </p>
+                  {formattedDate && (
+                    <p style={{ fontSize: 13, color: "#6b7280", margin: "4px 0 0" }}>
+                      {formattedDate}
+                    </p>
+                  )}
                 </div>
 
-                {/* Only completed rounds get any icons — evaluating/pending
-                    rounds render nothing here, on purpose. */}
-                <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                  {item.tech_status === "completed" && (
-                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {round.type === "technical" && round.status === "completed" && (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: "#6b7280", marginRight: 2 }}>Technical</span>
                       <button
                         className="is-btn-ghost"
                         title="Preview report"
                         style={iconBtnStyle}
                         onClick={() =>
-                          setPreview({ sessionId: item.session_id, roundType: "technical", role: item.target_role })
+                          setPreview({
+                            sessionId: round.session.session_id,
+                            roundType: "technical",
+                            role: round.session.target_role,
+                          })
                         }
                       >
                         <EyeIcon />
@@ -183,23 +249,27 @@ export default function InterviewHistory() {
                         className="is-btn-ghost"
                         title="Download PDF"
                         style={iconBtnStyle}
-                        disabled={downloadingKey === techKey}
-                        onClick={() => handleDownload(item, "technical")}
+                        disabled={downloadingKey === downloadKey}
+                        onClick={() => handleDownload(round.session, "technical")}
                       >
-                        {downloadingKey === techKey ? <SpinnerIcon /> : <DownloadIcon />}
+                        {downloadingKey === downloadKey ? <SpinnerIcon /> : <DownloadIcon />}
                       </button>
                     </div>
                   )}
 
-                  {item.hr_status === "completed" && (
-                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  {round.type === "hr" && round.status === "completed" && (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: "#6b7280", marginRight: 2 }}>HR</span>
                       <button
                         className="is-btn-ghost"
                         title="Preview report"
                         style={iconBtnStyle}
                         onClick={() =>
-                          setPreview({ sessionId: item.session_id, roundType: "hr", role: item.target_role })
+                          setPreview({
+                            sessionId: round.session.session_id,
+                            roundType: "hr",
+                            role: round.session.target_role,
+                          })
                         }
                       >
                         <EyeIcon />
@@ -208,11 +278,39 @@ export default function InterviewHistory() {
                         className="is-btn-ghost"
                         title="Download PDF"
                         style={iconBtnStyle}
-                        disabled={downloadingKey === hrKey}
-                        onClick={() => handleDownload(item, "hr")}
+                        disabled={downloadingKey === downloadKey}
+                        onClick={() => handleDownload(round.session, "hr")}
                       >
-                        {downloadingKey === hrKey ? <SpinnerIcon /> : <DownloadIcon />}
+                        {downloadingKey === downloadKey ? <SpinnerIcon /> : <DownloadIcon />}
                       </button>
+                    </div>
+                  )}
+
+                  {round.type === "coding" && (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      {(() => {
+                        const val = Number(round.score) || 0;
+                        const badgeStyle =
+                          val <= 40
+                            ? { background: "#fde8e8", color: "#9b1c1c" }
+                            : val <= 80
+                              ? { background: "#fef9c3", color: "#854d0e" }
+                              : { background: "#def7ec", color: "#03543f" };
+
+                        return (
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                              ...badgeStyle,
+                            }}
+                          >
+                            Score {round.score !== undefined && round.score !== null ? `${round.score}%` : "0%"}
+                          </span>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

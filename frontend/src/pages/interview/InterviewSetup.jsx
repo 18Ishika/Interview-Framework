@@ -17,9 +17,14 @@ export default function InterviewSetup() {
   const [jd, setJd] = useState('');
 
   function handleStart() {
+    if (selectedType === 'coding') {
+      navigate('/coding-round');
+      return;
+    }
     if (selectedType === 'technical' && !selectedRole) return;
     navigate('/interview/preflight', { state: { type: selectedType, role: selectedRole, jd } });
   }
+
 
   return (
     <div className="is-page">
@@ -42,7 +47,23 @@ export default function InterviewSetup() {
                 Technical
                 {selectedType === 'technical' && <span className="is-sel-pill">Selected</span>}
               </div>
-              <div className="is-type-desc">DSA, system design, coding questions with a live editor.</div>
+              <div className="is-type-desc">Live AI voice technical interview with algorithmic questions.</div>
+            </div>
+          </div>
+
+          <div
+            className={`is-type-card ${selectedType === 'coding' ? 'is-type-card--selected' : ''}`}
+            onClick={() => setSelectedType('coding')}
+          >
+            <div className="is-type-icon">
+              <i className="ti ti-code" aria-hidden="true" />
+            </div>
+            <div>
+              <div className="is-type-name">
+                Coding Round
+                {selectedType === 'coding' && <span className="is-sel-pill">Selected</span>}
+              </div>
+              <div className="is-type-desc">Hands-on DSA coding assessment with Monaco IDE & Judge0 evaluation.</div>
             </div>
           </div>
 
@@ -63,6 +84,7 @@ export default function InterviewSetup() {
           </div>
         </div>
       </div>
+
 
       {/* Role selector — only for technical */}
       {selectedType === 'technical' && (

@@ -21,6 +21,7 @@ import Login from './pages/auth/login';
 import Signup from './pages/auth/signup';
 import Dashboard from './pages/dashboard';
 import IQCardPage from './pages/profile/IQCardPage';
+import CodingRoundPage from './pages/coding/CodingRoundPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -86,7 +87,7 @@ function App() {
           <Route path="/signup/*" element={<Signup />} />
           <Route path="/candidate/:candidateId" element={<PublicCandidateProfile />} />
 
-          {/* Interview flow — outside AppLayout (no sidebar) */}
+          {/* Interview & Coding flow — outside AppLayout (no sidebar during proctored sessions) */}
           <Route path="/interview/preflight" element={<PreflightPage />} />
           <Route path="/interview/session" element={
             <ProtectedRoute><InterviewSession /></ProtectedRoute>
@@ -97,6 +98,9 @@ function App() {
           <Route path="/interview/results" element={
             <ProtectedRoute><InterviewResults /></ProtectedRoute>
           } />
+          <Route path="/coding-round" element={
+            <ProtectedRoute><CodingRoundPage /></ProtectedRoute>
+          } />
 
           {/* Public IQ Card */}
           {/* App shell with sidebar */}
@@ -104,7 +108,6 @@ function App() {
             <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
-            <Route path="/coding-round" element={<ProtectedRoute><div>Coding Round</div></ProtectedRoute>} />
             <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           </Route>
@@ -113,5 +116,6 @@ function App() {
     </ClerkProvider>
   );
 }
+
 
 export default App;
