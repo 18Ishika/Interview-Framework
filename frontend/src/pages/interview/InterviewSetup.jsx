@@ -14,7 +14,12 @@ const TYPES = [
   {
     id: 'technical',
     name: 'Technical',
-    desc: 'DSA, system design, coding questions with a live editor.',
+    desc: 'Live AI voice technical interview with algorithmic questions.',
+  },
+  {
+    id: 'coding',
+    name: 'Coding Round',
+    desc: 'Hands-on DSA coding assessment with Monaco IDE & Judge0 evaluation.',
   },
   {
     id: 'hr',
@@ -49,6 +54,10 @@ export default function InterviewSetup() {
 
   function handleStart() {
     if (!canContinue) return;
+    if (selectedType === 'coding') {
+      navigate('/coding-round');
+      return;
+    }
     navigate('/interview/preflight', { state: { type: selectedType, role: selectedRole, jd } });
   }
 

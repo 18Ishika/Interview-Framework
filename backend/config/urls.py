@@ -27,4 +27,5 @@ urlpatterns = [
     path("api/interview/", include("interview_sessions.urls")),
     path('api/tech-int/', include('tech_int.urls')),
     path('api/hr-int/', include('hr_int.urls')),
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('api/coding-round/', include('coding_round.urls')),
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
