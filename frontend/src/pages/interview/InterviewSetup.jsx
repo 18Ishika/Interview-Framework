@@ -10,21 +10,56 @@ const ROLES = [
   "DevOps Engineer (Fresher)",
 ];
 
+const TYPES = [
+  {
+    id: 'technical',
+    name: 'Technical',
+    desc: 'Live AI voice technical interview with algorithmic questions.',
+  },
+  {
+    id: 'coding',
+    name: 'Coding Round',
+    desc: 'Hands-on DSA coding assessment with Monaco IDE & Judge0 evaluation.',
+  },
+  {
+    id: 'hr',
+    name: 'HR / behavioural',
+    desc: 'Situational and culture-fit questions, no coding required.',
+  },
+];
+
+const INSTRUCTIONS = [
+  {
+    title: 'Full-screen mode required',
+    desc: 'The interview runs in full screen. Exiting or switching tabs will flag a warning and may terminate the session.',
+  },
+  {
+    title: 'Camera and mic must be on',
+    desc: "You'll be prompted to allow access on the next screen.",
+  },
+  {
+    title: 'No tab switching',
+    desc: 'Leaving the interview tab during the session will be flagged automatically.',
+  },
+];
+
 export default function InterviewSetup() {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState('technical');
   const [selectedRole, setSelectedRole] = useState('');
   const [jd, setJd] = useState('');
 
+  const needsRole = selectedType === 'technical';
+  const canContinue = !needsRole || !!selectedRole;
+
   function handleStart() {
+    if (!canContinue) return;
     if (selectedType === 'coding') {
       navigate('/coding-round');
       return;
     }
-    if (selectedType === 'technical' && !selectedRole) return;
     navigate('/interview/preflight', { state: { type: selectedType, role: selectedRole, jd } });
   }
-
 
   return (
     <div className="is-page">
@@ -33,131 +68,98 @@ export default function InterviewSetup() {
 
       {/* Type selector */}
       <div className="is-section">
-        <div className="is-label">Interview type</div>
-        <div className="is-type-grid">
-          <div
-            className={`is-type-card ${selectedType === 'technical' ? 'is-type-card--selected' : ''}`}
-            onClick={() => setSelectedType('technical')}
-          >
-            <div className="is-type-icon">
-              <i className="ti ti-terminal-2" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="is-type-name">
-                Technical
-                {selectedType === 'technical' && <span className="is-sel-pill">Selected</span>}
-              </div>
-              <div className="is-type-desc">Live AI voice technical interview with algorithmic questions.</div>
-            </div>
-          </div>
-
-          <div
-            className={`is-type-card ${selectedType === 'coding' ? 'is-type-card--selected' : ''}`}
-            onClick={() => setSelectedType('coding')}
-          >
-            <div className="is-type-icon">
-              <i className="ti ti-code" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="is-type-name">
-                Coding Round
-                {selectedType === 'coding' && <span className="is-sel-pill">Selected</span>}
-              </div>
-              <div className="is-type-desc">Hands-on DSA coding assessment with Monaco IDE & Judge0 evaluation.</div>
-            </div>
-          </div>
-
-          <div
-            className={`is-type-card ${selectedType === 'hr' ? 'is-type-card--selected' : ''}`}
-            onClick={() => setSelectedType('hr')}
-          >
-            <div className="is-type-icon">
-              <i className="ti ti-users" aria-hidden="true" />
-            </div>
-            <div>
-              <div className="is-type-name">
-                HR / behavioural
-                {selectedType === 'hr' && <span className="is-sel-pill">Selected</span>}
-              </div>
-              <div className="is-type-desc">Situational and culture-fit questions, no coding required.</div>
-            </div>
-          </div>
+        <div className="is-label" id="is-type-label">Interview type</div>
+        <div className="is-type-grid" role="radiogroup" aria-labelledby="is-type-label">
+          {TYPES.map((t) => {
+            const selected = selectedType === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`is-type-card ${selected ? 'is-type-card--selected' : ''}`}
+                onClick={() => setSelectedType(t.id)}
+              >
+                <span className="is-type-top">
+                  <span className="is-type-name">{t.name}</span>
+                  <span className="is-radio" aria-hidden="true" />
+                </span>
+                <span className="is-type-desc">{t.desc}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-
       {/* Role selector — only for technical */}
-      {selectedType === 'technical' && (
+      {needsRole && (
         <div className="is-section">
-          <div className="is-label">Select role</div>
-          <div className="is-role-grid">
-            {ROLES.map((role) => (
-              <div
-                key={role}
-                className={`is-role-card ${selectedRole === role ? 'is-role-card--selected' : ''}`}
-                onClick={() => setSelectedRole(role)}
-              >
-                {role}
-                {selectedRole === role && <span className="is-sel-pill">Selected</span>}
-              </div>
-            ))}
+          <div className="is-label" id="is-role-label">Select role</div>
+          <div className="is-role-grid" role="radiogroup" aria-labelledby="is-role-label">
+            {ROLES.map((role) => {
+              const selected = selectedRole === role;
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={`is-role-card ${selected ? 'is-role-card--selected' : ''}`}
+                  onClick={() => setSelectedRole(role)}
+                >
+                  {role}
+                  <span className="is-radio" aria-hidden="true" />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Job description */}
       <div className="is-section">
-        <div className="is-label">
+        <label className="is-label" htmlFor="is-jd">
           Job description <span className="is-optional">(optional)</span>
-        </div>
+        </label>
         <textarea
+          id="is-jd"
           className="is-jd"
           placeholder="Paste the job description here — the AI will tailor questions to the role and stack."
           value={jd}
-          onChange={e => setJd(e.target.value)}
+          onChange={(e) => setJd(e.target.value)}
         />
+        {jd.length > 0 && <div className="is-count">{jd.length} characters</div>}
       </div>
 
       {/* Instructions */}
       <div className="is-section">
         <div className="is-label">Before you begin</div>
         <div className="is-instructions">
-          <div className="is-instruction-item">
-            <div className="is-instruction-icon"><i className="ti ti-maximize" /></div>
-            <div>
-              <div className="is-instruction-title">Full-screen mode required</div>
-              <div className="is-instruction-desc">The interview runs in full screen. Exiting or switching tabs will flag a warning and may terminate the session.</div>
+          {INSTRUCTIONS.map((item) => (
+            <div className="is-instruction-item" key={item.title}>
+              <div className="is-instruction-title">{item.title}</div>
+              <div className="is-instruction-desc">{item.desc}</div>
             </div>
-          </div>
-          <div className="is-instruction-item">
-            <div className="is-instruction-icon"><i className="ti ti-video" /></div>
-            <div>
-              <div className="is-instruction-title">Camera and mic must be on</div>
-              <div className="is-instruction-desc">You'll be prompted to allow access on the next screen.</div>
-            </div>
-          </div>
-          
-          <div className="is-instruction-item">
-            <div className="is-instruction-icon"><i className="ti ti-forbid" /></div>
-            <div>
-              <div className="is-instruction-title">No tab switching</div>
-              <div className="is-instruction-desc">Leaving the interview tab during the session will be flagged automatically.</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       <div className="is-actions">
-        <button className="is-btn-ghost" onClick={() => navigate(-1)}>Back</button>
-        <button
-          className="is-btn-primary"
-          onClick={handleStart}
-          disabled={selectedType === 'technical' && !selectedRole}
-          style={{ opacity: selectedType === 'technical' && !selectedRole ? 0.5 : 1, cursor: selectedType === 'technical' && !selectedRole ? 'not-allowed' : 'pointer' }}
-        >
-          <i className="ti ti-player-play" />
-          Continue to setup
+        <button type="button" className="is-btn-ghost" onClick={() => navigate(-1)}>
+          Back
         </button>
+        <div className="is-actions-right">
+          {!canContinue && <span className="is-hint">Select a role to continue</span>}
+          <button
+            type="button"
+            className="is-btn-primary"
+            onClick={handleStart}
+            disabled={!canContinue}
+          >
+            Continue to setup
+          </button>
+        </div>
       </div>
     </div>
   );
