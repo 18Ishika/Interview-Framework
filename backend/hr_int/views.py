@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 def start_hr_interview(request):
     try:
         recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-        if not recent_session or recent_session.is_all_completed():
+        # Skip round flexibility rule if in development mode (DEBUG)
+        if not recent_session or recent_session.is_all_completed() or settings.DEBUG:
             session_id = uuid.uuid4()
             interview_session = Session.objects.create(
                 id=session_id,

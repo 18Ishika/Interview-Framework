@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -31,7 +32,8 @@ def start_interview_view(request):
 
         if not session_id:
             recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-            if not recent_session or recent_session.is_all_completed():
+            # Skip round flexibility rule if in development mode (DEBUG)
+            if not recent_session or recent_session.is_all_completed() or settings.DEBUG:
                 interview_session = Session.objects.create(
                     id=uuid.uuid4(),
                     user=request.user,

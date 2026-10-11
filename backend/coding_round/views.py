@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -71,7 +72,8 @@ def start_coding_round_view(request):
     recent_session = Session.objects.filter(user=user).order_by("-created_at").first()
 
     session = None
-    if not recent_session or force_new:
+    # Skip round flexibility rule if in development mode (DEBUG)
+    if not recent_session or force_new or settings.DEBUG:
         session = Session.objects.create(
             user=user,
             target_role=recent_session.target_role if recent_session else "Software Engineer",
