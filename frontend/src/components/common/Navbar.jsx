@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser, SignOutButton } from '@clerk/clerk-react';
 
 const LEAF = 'M16,16 C11,15 9,9 16,3 C23,9 21,15 16,16 Z';
@@ -21,6 +21,7 @@ const NAV_LINKS = [
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isSignedIn } = useUser();
   const [scrolled, setScrolled] = useState(false);
   const [activeId, setActiveId] = useState('about');
@@ -50,12 +51,20 @@ const Navbar = () => {
 
   const scrollToSection = (id) => {
     setMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    if (location.pathname !== '/') {
+      navigate('/', { state: { targetId: id } });
+    } else {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const goTop = () => {
     setMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (location.pathname !== '/') {
+      navigate('/');
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -147,12 +156,22 @@ const Navbar = () => {
           {NAV_LINKS.map(({ label, id }) => (
             <button
               key={id}
-              className={`nav-link${activeId === id ? ' is-active' : ''}`}
+              className={`nav-link${activeId === id && location.pathname === '/' ? ' is-active' : ''}`}
               onClick={() => scrollToSection(id)}
             >
               {label}
             </button>
           ))}
+          <button
+            id="nav-pricing-btn"
+            className={`nav-link${location.pathname === '/pricing' ? ' is-active' : ''}`}
+            onClick={() => {
+              setMenuOpen(false);
+              navigate('/pricing');
+            }}
+          >
+            Pricing
+          </button>
         </div>
 
         {/* Auth */}
@@ -197,13 +216,24 @@ const Navbar = () => {
           {NAV_LINKS.map(({ label, id }) => (
             <button
               key={id}
-              className={`nav-link${activeId === id ? ' is-active' : ''}`}
+              className={`nav-link${activeId === id && location.pathname === '/' ? ' is-active' : ''}`}
               style={{ textAlign: 'left', padding: '12px 2px', fontSize: 16 }}
               onClick={() => scrollToSection(id)}
             >
               {label}
             </button>
           ))}
+          <button
+            id="nav-mobile-pricing-btn"
+            className={`nav-link${location.pathname === '/pricing' ? ' is-active' : ''}`}
+            style={{ textAlign: 'left', padding: '12px 2px', fontSize: 16 }}
+            onClick={() => {
+              setMenuOpen(false);
+              navigate('/pricing');
+            }}
+          >
+            Pricing
+          </button>
           <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
             {isSignedIn ? (
               <>

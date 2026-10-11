@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/coding-round',      icon: 'ti-code',             label: 'Coding Round' },
   { to: '/interview',         icon: 'ti-microphone',       label: 'Interview' },
   { to: '/interview/history', icon: 'ti-history',          label: 'History' },
+  { to: '/pricing',           icon: 'ti-tag',              label: 'Pricing' },
   { to: '/account',           icon: 'ti-user-circle',      label: 'Account' },
 ];
 

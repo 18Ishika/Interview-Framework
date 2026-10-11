@@ -21,6 +21,7 @@ import Signup from './pages/auth/signup';
 import Dashboard from './pages/Dashboard';
 import IQCardPage from './pages/profile/IQCardPage';
 import CodingRoundPage from './pages/coding/CodingRoundPage';
+import PricingPage from './pages/PricingPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -81,6 +82,7 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/login/*" element={<Login />} />
           <Route path="/signup/*" element={<Signup />} />
           <Route path="/candidate/:candidateId" element={<PublicCandidateProfile />} />
