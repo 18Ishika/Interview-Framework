@@ -216,8 +216,8 @@ export default function PricingPage() {
 
       const razorpayKey = orderData.key_id;
 
-      // 2. Open Razorpay Checkout modal if live keys exist and script is loaded
-      if (window.Razorpay && razorpayKey && !razorpayKey.startsWith('mock_')) {
+      // 2. Open Razorpay Checkout modal if live/test keys exist and not a mock order
+      if (window.Razorpay && razorpayKey && !razorpayKey.startsWith('mock_') && !orderData.is_mock) {
         const options = {
           key: razorpayKey,
           amount: Math.round(orderData.amount * 100),

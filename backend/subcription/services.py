@@ -51,7 +51,7 @@ class RazorpayService:
         amount_paise = int(amount_inr * 100)
 
         # In testing or if keys are mock/unset, provide a standard mock order
-        if not key_id or not key_secret or key_id.startswith("mock_") or "test" in key_id.lower():
+        if not key_id or not key_secret or key_id.startswith("mock_"):
             mock_order_id = f"order_{uuid.uuid4().hex[:14]}"
             return {
                 "id": mock_order_id,
@@ -59,6 +59,7 @@ class RazorpayService:
                 "currency": "INR",
                 "receipt": receipt,
                 "status": "created",
+                "is_mock": True,
             }
 
         try:
@@ -234,6 +235,7 @@ class SubscriptionService:
             "key_id": key_id,
             "plan_name": plan.name,
             "plan_type": plan.plan_type,
+            "is_mock": order_data.get("is_mock", False),
         }
 
     @classmethod
