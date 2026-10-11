@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "coding_round",
     "recording_service",
     "qna_service",
+    "subcription",
 ]
 
 # --- Middleware ---
