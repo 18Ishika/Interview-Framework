@@ -9,7 +9,6 @@ import InterviewHistory from './pages/interview/InterviewHistory';
 import Hero from './components/landing/Hero';
 import Features from './components/landing/Features';
 import HowItWorks from './components/landing/HowItWorks';
-import DashboardPreview from './components/landing/DashboardPreview';
 import Profile from './pages/profile/Profile';
 import PublicCandidateProfile from './pages/profile/publiccandidateprofile';
 import InterviewPreflight from './components/interview/Interviewpreflight';
@@ -19,7 +18,7 @@ import HrInterviewSession from './pages/interview/HrInterviewSession';
 import InterviewResults from './pages/interview/InterviewResults';
 import Login from './pages/auth/login';
 import Signup from './pages/auth/signup';
-import Dashboard from './pages/dashboard';
+import Dashboard from './pages/Dashboard';
 import IQCardPage from './pages/profile/IQCardPage';
 import CodingRoundPage from './pages/coding/CodingRoundPage';
 
@@ -42,7 +41,6 @@ function HomePage() {
       <Hero />
       <Features />
       <HowItWorks />
-      <DashboardPreview />
     </div>
   );
 }

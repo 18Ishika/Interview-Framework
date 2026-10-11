@@ -6,7 +6,6 @@ import { getPendingNotifications, acknowledgeResult } from '../api/interviewApi'
 import Hero from '../components/landing/Hero';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
-import DashboardPreview from '../components/landing/DashboardPreview';
 
 export default function Dashboard() {
   const { getToken, userId } = useAuth();
@@ -82,7 +81,6 @@ export default function Dashboard() {
       <Hero />
       <Features />
       <HowItWorks />
-      <DashboardPreview />
 
       {showResultsPopup && (
         <div style={{
