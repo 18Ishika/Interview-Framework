@@ -108,7 +108,20 @@ def start_coding_round_view(request):
             session.coding_status = "in_progress"
             session.save(update_fields=["coding_status", "updated_at"])
 
-
+    # Subscription entitlement verification & consumption
+    try:
+        from subcription.services import SubscriptionService
+        from subcription.models import SubscriptionPlan
+        can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(user, session)
+        if not can_proceed:
+            if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                return Response({
+                    "success": False,
+                    "error": reason,
+                    "entitlement_exceeded": True,
+                }, status=status.HTTP_403_FORBIDDEN)
+    except Exception:
+        pass
 
     # 2. Get or create CodingRound
     coding_round, created = CodingRound.objects.get_or_create(session=session)

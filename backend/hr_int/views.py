@@ -59,6 +59,17 @@ def start_hr_interview(request):
             interview_session.save()
             session_id = interview_session.id
 
+        # Subscription entitlement verification & consumption
+        try:
+            from subcription.services import SubscriptionService
+            from subcription.models import SubscriptionPlan
+            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
+            if not can_proceed:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
+
         hr_round, created = HrRound.objects.get_or_create(session=interview_session)
         if created or not hr_round.started_at:
             hr_round.started_at = timezone.now()
