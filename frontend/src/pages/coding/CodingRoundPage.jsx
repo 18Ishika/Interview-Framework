@@ -399,8 +399,8 @@ export default function CodingRoundPage() {
               <div
                 className="session-modal-icon"
                 style={{
-                  background: warningModal.type === 'already_completed' ? '#edf5fc' : '#fef3c7',
-                  color: warningModal.type === 'already_completed' ? '#1f4f78' : '#d97706',
+                  background: warningModal.type === 'already_completed' ? '#EAF6F0' : '#FEF3C7',
+                  color: warningModal.type === 'already_completed' ? '#2A7A52' : '#D97706',
                 }}
               >
                 {warningModal.type === 'already_completed' ? (
@@ -479,8 +479,8 @@ export default function CodingRoundPage() {
   if (phase === 'completed') {
     return (
       <div className="coding-intro-container">
-        <div className="coding-intro-card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', color: '#10b981', marginBottom: '16px' }}>
+        <div className="coding-intro-card" style={{ textAlign: 'center', maxWidth: '640px' }}>
+          <div style={{ fontSize: '52px', color: 'var(--color-success, #2A7A52)', marginBottom: '16px' }}>
             <i className="ti ti-circle-check" />
           </div>
           <h1 className="coding-intro-title">Assessment Submitted!</h1>
@@ -490,30 +490,38 @@ export default function CodingRoundPage() {
 
           <div
             style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '24px',
+              background: 'var(--color-bg-secondary, #FDFAF1)',
+              border: '1px solid var(--color-border, #E7DDC8)',
+              borderRadius: 'var(--radius-md, 14px)',
+              padding: '28px',
               marginBottom: '28px',
             }}
           >
             <div
               style={{
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: '700',
-                color: '#64748b',
+                color: 'var(--color-text-secondary, #4A5D4F)',
                 textTransform: 'uppercase',
+                letterSpacing: '0.06em',
                 marginBottom: '8px',
               }}
             >
               Final Round Score
             </div>
-            <div style={{ fontSize: '42px', fontWeight: '800', color: '#1F4F78' }}>
+            <div
+              style={{
+                fontSize: '46px',
+                fontWeight: '800',
+                color: 'var(--color-text-primary, #00200B)',
+                fontFamily: 'var(--font-display, inherit)',
+              }}
+            >
               {finalSummary?.total_score || 0}%
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => navigate('/dashboard')}
               className="btn-start-coding"
@@ -523,15 +531,8 @@ export default function CodingRoundPage() {
             </button>
             <button
               onClick={() => navigate('/interview/history')}
-              style={{
-                padding: '12px 24px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '10px',
-                background: '#ffffff',
-                color: '#334155',
-                fontWeight: '700',
-                cursor: 'pointer',
-              }}
+              className="session-btn-secondary"
+              style={{ padding: '12px 24px' }}
             >
               View Interview History
             </button>
