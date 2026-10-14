@@ -119,7 +119,7 @@ export default function HrInterviewSession() {
         throw new Error("Camera initialization failed. Please check permissions.");
       }
       
-      const q = await startHrInterview(getToken);
+      const q = location.state?.initialQuestion || await startHrInterview(getToken);
       setQuestion(q);
       setPhase("question");
       

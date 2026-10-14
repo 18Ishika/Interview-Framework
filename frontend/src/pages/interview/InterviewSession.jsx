@@ -119,7 +119,7 @@ export default function InterviewSession() {
         throw new Error("Camera initialization failed. Please check permissions.");
       }
       
-      const q = await startInterview(role, getToken);
+      const q = location.state?.initialQuestion || await startInterview(role, getToken);
       setQuestion(q);
       setPhase("question");
       

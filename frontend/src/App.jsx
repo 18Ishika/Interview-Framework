@@ -60,11 +60,11 @@ function PreflightPage() {
   const location = useLocation();
   return (
     <ProtectedRoute>
-      <InterviewPreflight onBeginRealInterview={() => {
+      <InterviewPreflight onBeginRealInterview={(initialQuestion) => {
         if (location.state?.type === 'hr') {
-          navigate('/interview/hr', { state: location.state });
+          navigate('/interview/hr', { state: { ...location.state, initialQuestion, sessionId: initialQuestion?.session_id } });
         } else {
-          navigate('/interview/session', { state: location.state });
+          navigate('/interview/session', { state: { ...location.state, initialQuestion, session_id: initialQuestion?.session_id } });
         }
       }} />
     </ProtectedRoute>

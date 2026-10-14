@@ -49,7 +49,7 @@ def prepare_full_source_code(submitted_code: str, language: str, template: CodeT
 
     return submitted_code
 
-print(settings.DEBUG)
+
 @api_view(["POST"])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])

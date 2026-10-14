@@ -32,6 +32,17 @@ def start_interview_view(request):
         if not role_name:
             return Response({"error": "Role is required"}, status=400)
 
+        # Verify subscription entitlement first before starting/resuming tech interview
+        try:
+            from subcription.services import SubscriptionService
+            from subcription.models import SubscriptionPlan
+            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+            if not is_entitled:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
+
         if not session_id:
             recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
             if not recent_session or recent_session.is_all_completed():

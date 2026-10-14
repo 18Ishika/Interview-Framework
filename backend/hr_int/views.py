@@ -32,6 +32,17 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 def start_hr_interview(request):
     try:
+        # Verify subscription entitlement first before starting/resuming hr interview
+        try:
+            from subcription.services import SubscriptionService
+            from subcription.models import SubscriptionPlan
+            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+            if not is_entitled:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
+
         recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
         if not recent_session or recent_session.is_all_completed():
             session_id = uuid.uuid4()

@@ -49,9 +49,8 @@ export default function CodingRoundPage() {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [finalSummary, setFinalSummary] = useState(null);
 
-  // Already Completed Popup State
-  const [alreadyCompletedInfo, setAlreadyCompletedInfo] = useState(null);
-  const [showAlreadyCompletedModal, setShowAlreadyCompletedModal] = useState(false);
+  // Already Completed / Warning Popup State
+  const [warningModal, setWarningModal] = useState(null);
 
   const timerRef = useRef(null);
   const editorRef = useRef(null);
@@ -67,7 +66,7 @@ export default function CodingRoundPage() {
   const handleStartAssessment = async (forceNew = false) => {
     setLoading(true);
     setInitError('');
-    setShowAlreadyCompletedModal(false);
+    setWarningModal(null);
 
     try {
       // 1. Fetch or create coding session with round flexibility logic
@@ -75,8 +74,23 @@ export default function CodingRoundPage() {
 
       if (res.already_completed) {
         exitFullscreenSafely();
-        setAlreadyCompletedInfo(res);
-        setShowAlreadyCompletedModal(true);
+        setWarningModal({
+          type: 'already_completed',
+          title: 'Round Already Completed',
+          message: res.message || 'You have already completed the Coding Round for this interview session.',
+          details: res,
+        });
+        return;
+      }
+
+      if (res.entitlement_exceeded) {
+        exitFullscreenSafely();
+        setWarningModal({
+          type: 'limit_reached',
+          title: 'Session Limit Reached',
+          message: res.error || res.message || 'You have reached your daily limit of sessions for today. Your limit will reset tomorrow.',
+          details: res,
+        });
         return;
       }
 
@@ -108,7 +122,30 @@ export default function CodingRoundPage() {
       setPhase('workspace');
     } catch (err) {
       console.error('Error starting coding round:', err);
-      setInitError(err.message || 'Error connecting to coding server');
+      const data = err.data || {};
+      const isAlreadyCompleted = Boolean(
+        data.already_completed ||
+        err.message?.toLowerCase().includes('already completed')
+      );
+      const isLimitReached = Boolean(
+        data.entitlement_exceeded ||
+        err.message?.toLowerCase().includes('daily') ||
+        err.message?.toLowerCase().includes('limit') ||
+        err.message?.toLowerCase().includes('subscription') ||
+        err.status === 403
+      );
+
+      if (isAlreadyCompleted || isLimitReached) {
+        exitFullscreenSafely();
+        setWarningModal({
+          type: isAlreadyCompleted ? 'already_completed' : 'limit_reached',
+          title: isAlreadyCompleted ? 'Round Already Completed' : 'Session Limit Reached',
+          message: err.message || 'Unable to start coding assessment.',
+          details: data,
+        });
+      } else {
+        setInitError(err.message || 'Error connecting to coding server');
+      }
     } finally {
       setLoading(false);
     }
@@ -355,61 +392,80 @@ export default function CodingRoundPage() {
           error={initError}
         />
 
-        {/* Already Completed Modal */}
-        {showAlreadyCompletedModal && (
+        {/* Warning Modal (Same style as Tech and HR Preflight) */}
+        {warningModal && (
           <div className="session-modal-overlay">
             <div className="session-modal-card">
-              <div className="session-modal-icon">
-                <i className="ti ti-circle-check" />
+              <div
+                className="session-modal-icon"
+                style={{
+                  background: warningModal.type === 'already_completed' ? '#edf5fc' : '#fef3c7',
+                  color: warningModal.type === 'already_completed' ? '#1f4f78' : '#d97706',
+                }}
+              >
+                {warningModal.type === 'already_completed' ? (
+                  <i className="ti ti-circle-check" />
+                ) : (
+                  <i className="ti ti-alert-triangle" />
+                )}
               </div>
-              <h2 className="session-modal-title">Round Already Completed</h2>
-              <p className="session-modal-text">
-                {alreadyCompletedInfo?.message ||
-                  'You have already completed the Coding Round for this interview session.'}
-              </p>
+              <h2 className="session-modal-title">{warningModal.title}</h2>
+              <p className="session-modal-text">{warningModal.message}</p>
 
               {/* Session Status Overview */}
-              {alreadyCompletedInfo && (
+              {warningModal.details?.already_completed && (
                 <div className="session-status-list">
                   <div className="session-status-row">
                     <span className="session-status-label">Coding Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.coding_status}`}>
-                      {alreadyCompletedInfo.coding_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.coding_status || 'completed'}`}>
+                      {warningModal.details.coding_status || 'completed'}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">Technical Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.tech_status}`}>
-                      {alreadyCompletedInfo.tech_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.tech_status || 'pending'}`}>
+                      {warningModal.details.tech_status || 'pending'}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">HR Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.hr_status}`}>
-                      {alreadyCompletedInfo.hr_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.hr_status || 'pending'}`}>
+                      {warningModal.details.hr_status || 'pending'}
                     </span>
                   </div>
                 </div>
               )}
 
               <div className="session-modal-actions">
-                <button
-                  className="session-btn-primary"
-                  onClick={() => navigate('/interview')}
-                >
-                  Continue Remaining Rounds (Technical / HR)
-                </button>
-                <button
-                  className="session-btn-secondary"
-                  onClick={() => navigate('/interview/history')}
-                >
-                  View History
-                </button>
+                {warningModal.type === 'limit_reached' && (
+                  <button
+                    className="session-btn-primary"
+                    onClick={() => navigate('/pricing')}
+                  >
+                    View Subscription Plans →
+                  </button>
+                )}
+                {warningModal.type === 'already_completed' && (
+                  <button
+                    className="session-btn-primary"
+                    onClick={() => navigate('/interview')}
+                  >
+                    Continue Remaining Rounds (Technical / HR)
+                  </button>
+                )}
+                {warningModal.type === 'already_completed' && (
+                  <button
+                    className="session-btn-secondary"
+                    onClick={() => navigate('/interview/history')}
+                  >
+                    View History
+                  </button>
+                )}
                 <button
                   className="session-btn-close"
-                  onClick={() => setShowAlreadyCompletedModal(false)}
+                  onClick={() => setWarningModal(null)}
                 >
-                  Close
+                  Dismiss
                 </button>
               </div>
             </div>
