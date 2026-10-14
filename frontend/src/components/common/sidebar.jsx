@@ -19,12 +19,10 @@ const Logo = () => (
 );
 
 const NAV_ITEMS = [
-  { to: '/',                  icon: 'ti-layout-dashboard', label: 'Dashboard' },
-  { to: '/coding-round',      icon: 'ti-code',             label: 'Coding Round' },
-  { to: '/interview',         icon: 'ti-microphone',       label: 'Interview' },
-  { to: '/interview/history', icon: 'ti-history',          label: 'History' },
-  { to: '/pricing',           icon: 'ti-tag',              label: 'Pricing' },
-  { to: '/account',           icon: 'ti-user-circle',      label: 'Account' },
+  { to: '/', icon: 'ti-layout-dashboard', label: 'Dashboard' },
+  { to: '/interview', icon: 'ti-microphone', label: 'Interview' },
+  { to: '/interview/history', icon: 'ti-history', label: 'History' },
+  { to: '/account', icon: 'ti-user-circle', label: 'Account' },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
