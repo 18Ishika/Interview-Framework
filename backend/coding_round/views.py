@@ -49,7 +49,7 @@ def prepare_full_source_code(submitted_code: str, language: str, template: CodeT
 
     return submitted_code
 
-
+print(settings.DEBUG)
 @api_view(["POST"])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
@@ -72,8 +72,7 @@ def start_coding_round_view(request):
     recent_session = Session.objects.filter(user=user).order_by("-created_at").first()
 
     session = None
-    # Skip round flexibility rule if in development mode (DEBUG)
-    if not recent_session or force_new or settings.DEBUG:
+    if not recent_session or recent_session.is_all_completed() or force_new:
         session = Session.objects.create(
             user=user,
             target_role=recent_session.target_role if recent_session else "Software Engineer",
@@ -81,32 +80,22 @@ def start_coding_round_view(request):
             overall_status="in_progress",
         )
     else:
-        if recent_session.is_all_completed():
-            # All rounds of the last session are finished -> Start fresh session
-            session = Session.objects.create(
-                user=user,
-                target_role=recent_session.target_role or "Software Engineer",
-                coding_status="in_progress",
-                overall_status="in_progress",
-            )
-        else:
-            # Candidate attempted a round that is already completed in active session
-            if recent_session.coding_status == "completed":
-                return Response({
-                    "success": False,
-                    "already_completed": True,
-                    "message": "You have already completed the Coding Round for this interview session. Please proceed to the remaining rounds (Technical or HR) to complete your interview.",
-                    "session_id": str(recent_session.id),
-                    "coding_status": recent_session.coding_status,
-                    "tech_status": recent_session.tech_status,
-                    "hr_status": recent_session.hr_status,
-                }, status=status.HTTP_200_OK)
+        # Candidate attempted a round that is already completed in active session
+        if recent_session.coding_status == "completed" and not (settings.DEBUG or force_new):
+            return Response({
+                "success": False,
+                "already_completed": True,
+                "message": "You have already completed the Coding Round for this interview session. Please proceed to the remaining rounds (Technical or HR) to complete your interview.",
+                "session_id": str(recent_session.id),
+                "coding_status": recent_session.coding_status,
+                "tech_status": recent_session.tech_status,
+                "hr_status": recent_session.hr_status,
+            }, status=status.HTTP_200_OK)
 
-
-            # coding_status is 'pending' or 'in_progress' -> Use recent_session
-            session = recent_session
-            session.coding_status = "in_progress"
-            session.save(update_fields=["coding_status", "updated_at"])
+        # coding_status is 'pending' or 'in_progress' -> Use recent_session
+        session = recent_session
+        session.coding_status = "in_progress"
+        session.save(update_fields=["coding_status", "updated_at"])
 
     # Subscription entitlement verification & consumption
     try:

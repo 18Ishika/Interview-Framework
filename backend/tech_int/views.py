@@ -34,8 +34,7 @@ def start_interview_view(request):
 
         if not session_id:
             recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-            # Skip round flexibility rule if in development mode (DEBUG)
-            if not recent_session or recent_session.is_all_completed() or settings.DEBUG:
+            if not recent_session or recent_session.is_all_completed():
                 interview_session = Session.objects.create(
                     id=uuid.uuid4(),
                     user=request.user,
@@ -45,7 +44,7 @@ def start_interview_view(request):
                 )
                 session_id = interview_session.id
             else:
-                if recent_session.tech_status == "completed":
+                if recent_session.tech_status == "completed" and not settings.DEBUG:
                     return Response({
                         "already_completed": True,
                         "error": "You have already completed the Technical Round for this interview session. Please complete the remaining rounds or review your history.",

@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 def start_hr_interview(request):
     try:
         recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-        # Skip round flexibility rule if in development mode (DEBUG)
-        if not recent_session or recent_session.is_all_completed() or settings.DEBUG:
+        if not recent_session or recent_session.is_all_completed():
             session_id = uuid.uuid4()
             interview_session = Session.objects.create(
                 id=session_id,
@@ -44,7 +43,7 @@ def start_hr_interview(request):
                 overall_status="in_progress"
             )
         else:
-            if recent_session.hr_status == "completed":
+            if recent_session.hr_status == "completed" and not settings.DEBUG:
                 return Response({
                     "already_completed": True,
                     "error": "You have already completed the HR Round for this interview session. Please complete the remaining rounds or review your history.",
