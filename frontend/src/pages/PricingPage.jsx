@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, useAuth } from '@clerk/clerk-react';
-import Navbar from '../components/common/Navbar';
 import {
   fetchSubscriptionPlans,
   fetchMySubscription,
@@ -296,9 +295,6 @@ export default function PricingPage() {
 
   return (
     <div className="pricing-page" id="pricing-page-root">
-      {/* Platform Navigation */}
-      <Navbar />
-
       <main className="pricing-container">
         {/* Hero Section */}
         <header className="pricing-hero">

@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
+import { fetchMySubscription } from '../../api/subscriptionApi';
 import './sidebar.css';
 
 const LOGO_LEAF_PATH = 'M16,16 C11,15 9,9 16,3 C23,9 21,15 16,16 Z';
@@ -26,6 +28,31 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
+  const { getToken, isSignedIn } = useAuth();
+  const [subscription, setSubscription] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSub() {
+      if (!isSignedIn) {
+        setSubscription(null);
+        return;
+      }
+      try {
+        const sub = await fetchMySubscription(getToken);
+        if (isMounted) setSubscription(sub);
+      } catch (err) {
+        // Silently fallback if offline or request fails
+      }
+    }
+    loadSub();
+    return () => {
+      isMounted = false;
+    };
+  }, [isSignedIn, getToken]);
+
+  const hasActivePlan = Boolean(subscription?.has_active_subscription);
+
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
       <div className="sidebar__header">
@@ -65,11 +92,32 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* Subscription shortcut (hidden when collapsed). Remove this block if you don't want it. */}
+      {/* Subscription card */}
       {!collapsed && (
-        <NavLink to="/account" className="sidebar__plan">
-          <span className="sidebar__plan-title">Your subscription</span>
-          <span className="sidebar__plan-text">Check your monthly usage and recharge.</span>
+        <NavLink
+          to={hasActivePlan ? '/account' : '/pricing'}
+          className="sidebar__plan"
+        >
+          <div className="sidebar__plan-header">
+            <span className="sidebar__plan-title">
+              {hasActivePlan ? subscription.plan_name : 'No active plan'}
+            </span>
+            {hasActivePlan && (
+              <span className="sidebar__plan-badge">Active</span>
+            )}
+          </div>
+          <span className="sidebar__plan-text">
+            {hasActivePlan ? (
+              <>
+                {subscription.sessions_remaining_today ?? 0}/{subscription.daily_session_limit ?? 0} sessions today
+                {subscription.plan_type === 'usage_based' && subscription.remaining_usage_days != null
+                  ? ` • ${subscription.remaining_usage_days}d left`
+                  : ''}
+              </>
+            ) : (
+              'Choose a plan to start sessions.'
+            )}
+          </span>
         </NavLink>
       )}
     </aside>

@@ -82,7 +82,6 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/login/*" element={<Login />} />
           <Route path="/signup/*" element={<Signup />} />
           <Route path="/candidate/:candidateId" element={<PublicCandidateProfile />} />
@@ -102,9 +101,9 @@ function App() {
             <ProtectedRoute><CodingRoundPage /></ProtectedRoute>
           } />
 
-          {/* Public IQ Card */}
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
