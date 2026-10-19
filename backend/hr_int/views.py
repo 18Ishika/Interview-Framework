@@ -54,7 +54,7 @@ def start_hr_interview(request):
                 overall_status="in_progress"
             )
         else:
-            if recent_session.hr_status == "completed" and not settings.DEBUG:
+            if recent_session.hr_status in {"completed", "in_progress"} and not settings.DEBUG:
                 return Response({
                     "already_completed": True,
                     "error": "You have already completed the HR Round for this interview session. Please complete the remaining rounds or review your history.",

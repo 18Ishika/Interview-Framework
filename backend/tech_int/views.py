@@ -53,7 +53,7 @@ def start_interview_view(request):
                 )
                 session_id = interview_session.id
             else:
-                if recent_session.tech_status == "completed" and not settings.DEBUG:
+                if recent_session.tech_status in {"completed", "evaluating"} and not settings.DEBUG:
                     return Response({
                         "already_completed": True,
                         "error": "You have already completed the Technical Round for this interview session. Please complete the remaining rounds or review your history.",
