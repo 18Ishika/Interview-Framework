@@ -49,9 +49,8 @@ export default function CodingRoundPage() {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [finalSummary, setFinalSummary] = useState(null);
 
-  // Already Completed Popup State
-  const [alreadyCompletedInfo, setAlreadyCompletedInfo] = useState(null);
-  const [showAlreadyCompletedModal, setShowAlreadyCompletedModal] = useState(false);
+  // Already Completed / Warning Popup State
+  const [warningModal, setWarningModal] = useState(null);
 
   const timerRef = useRef(null);
   const editorRef = useRef(null);
@@ -67,7 +66,7 @@ export default function CodingRoundPage() {
   const handleStartAssessment = async (forceNew = false) => {
     setLoading(true);
     setInitError('');
-    setShowAlreadyCompletedModal(false);
+    setWarningModal(null);
 
     try {
       // 1. Fetch or create coding session with round flexibility logic
@@ -75,8 +74,23 @@ export default function CodingRoundPage() {
 
       if (res.already_completed) {
         exitFullscreenSafely();
-        setAlreadyCompletedInfo(res);
-        setShowAlreadyCompletedModal(true);
+        setWarningModal({
+          type: 'already_completed',
+          title: 'Round Already Completed',
+          message: res.message || 'You have already completed the Coding Round for this interview session.',
+          details: res,
+        });
+        return;
+      }
+
+      if (res.entitlement_exceeded) {
+        exitFullscreenSafely();
+        setWarningModal({
+          type: 'limit_reached',
+          title: 'Session Limit Reached',
+          message: res.error || res.message || 'You have reached your daily limit of sessions for today. Your limit will reset tomorrow.',
+          details: res,
+        });
         return;
       }
 
@@ -108,7 +122,30 @@ export default function CodingRoundPage() {
       setPhase('workspace');
     } catch (err) {
       console.error('Error starting coding round:', err);
-      setInitError(err.message || 'Error connecting to coding server');
+      const data = err.data || {};
+      const isAlreadyCompleted = Boolean(
+        data.already_completed ||
+        err.message?.toLowerCase().includes('already completed')
+      );
+      const isLimitReached = Boolean(
+        data.entitlement_exceeded ||
+        err.message?.toLowerCase().includes('daily') ||
+        err.message?.toLowerCase().includes('limit') ||
+        err.message?.toLowerCase().includes('subscription') ||
+        err.status === 403
+      );
+
+      if (isAlreadyCompleted || isLimitReached) {
+        exitFullscreenSafely();
+        setWarningModal({
+          type: isAlreadyCompleted ? 'already_completed' : 'limit_reached',
+          title: isAlreadyCompleted ? 'Round Already Completed' : 'Session Limit Reached',
+          message: err.message || 'Unable to start coding assessment.',
+          details: data,
+        });
+      } else {
+        setInitError(err.message || 'Error connecting to coding server');
+      }
     } finally {
       setLoading(false);
     }
@@ -355,61 +392,80 @@ export default function CodingRoundPage() {
           error={initError}
         />
 
-        {/* Already Completed Modal */}
-        {showAlreadyCompletedModal && (
+        {/* Warning Modal (Same style as Tech and HR Preflight) */}
+        {warningModal && (
           <div className="session-modal-overlay">
             <div className="session-modal-card">
-              <div className="session-modal-icon">
-                <i className="ti ti-circle-check" />
+              <div
+                className="session-modal-icon"
+                style={{
+                  background: warningModal.type === 'already_completed' ? '#EAF6F0' : '#FEF3C7',
+                  color: warningModal.type === 'already_completed' ? '#2A7A52' : '#D97706',
+                }}
+              >
+                {warningModal.type === 'already_completed' ? (
+                  <i className="ti ti-circle-check" />
+                ) : (
+                  <i className="ti ti-alert-triangle" />
+                )}
               </div>
-              <h2 className="session-modal-title">Round Already Completed</h2>
-              <p className="session-modal-text">
-                {alreadyCompletedInfo?.message ||
-                  'You have already completed the Coding Round for this interview session.'}
-              </p>
+              <h2 className="session-modal-title">{warningModal.title}</h2>
+              <p className="session-modal-text">{warningModal.message}</p>
 
               {/* Session Status Overview */}
-              {alreadyCompletedInfo && (
+              {warningModal.details?.already_completed && (
                 <div className="session-status-list">
                   <div className="session-status-row">
                     <span className="session-status-label">Coding Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.coding_status}`}>
-                      {alreadyCompletedInfo.coding_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.coding_status || 'completed'}`}>
+                      {warningModal.details.coding_status || 'completed'}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">Technical Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.tech_status}`}>
-                      {alreadyCompletedInfo.tech_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.tech_status || 'pending'}`}>
+                      {warningModal.details.tech_status || 'pending'}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">HR Round</span>
-                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.hr_status}`}>
-                      {alreadyCompletedInfo.hr_status}
+                    <span className={`session-status-pill session-status-pill--${warningModal.details.hr_status || 'pending'}`}>
+                      {warningModal.details.hr_status || 'pending'}
                     </span>
                   </div>
                 </div>
               )}
 
               <div className="session-modal-actions">
-                <button
-                  className="session-btn-primary"
-                  onClick={() => navigate('/interview')}
-                >
-                  Continue Remaining Rounds (Technical / HR)
-                </button>
-                <button
-                  className="session-btn-secondary"
-                  onClick={() => navigate('/interview/history')}
-                >
-                  View History
-                </button>
+                {warningModal.type === 'limit_reached' && (
+                  <button
+                    className="session-btn-primary"
+                    onClick={() => navigate('/pricing')}
+                  >
+                    View Subscription Plans →
+                  </button>
+                )}
+                {warningModal.type === 'already_completed' && (
+                  <button
+                    className="session-btn-primary"
+                    onClick={() => navigate('/interview')}
+                  >
+                    Continue Remaining Rounds (Technical / HR)
+                  </button>
+                )}
+                {warningModal.type === 'already_completed' && (
+                  <button
+                    className="session-btn-secondary"
+                    onClick={() => navigate('/interview/history')}
+                  >
+                    View History
+                  </button>
+                )}
                 <button
                   className="session-btn-close"
-                  onClick={() => setShowAlreadyCompletedModal(false)}
+                  onClick={() => setWarningModal(null)}
                 >
-                  Close
+                  Dismiss
                 </button>
               </div>
             </div>
@@ -423,8 +479,8 @@ export default function CodingRoundPage() {
   if (phase === 'completed') {
     return (
       <div className="coding-intro-container">
-        <div className="coding-intro-card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', color: '#10b981', marginBottom: '16px' }}>
+        <div className="coding-intro-card" style={{ textAlign: 'center', maxWidth: '640px' }}>
+          <div style={{ fontSize: '52px', color: 'var(--color-success, #2A7A52)', marginBottom: '16px' }}>
             <i className="ti ti-circle-check" />
           </div>
           <h1 className="coding-intro-title">Assessment Submitted!</h1>
@@ -434,30 +490,38 @@ export default function CodingRoundPage() {
 
           <div
             style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '12px',
-              padding: '24px',
+              background: 'var(--color-bg-secondary, #FDFAF1)',
+              border: '1px solid var(--color-border, #E7DDC8)',
+              borderRadius: 'var(--radius-md, 14px)',
+              padding: '28px',
               marginBottom: '28px',
             }}
           >
             <div
               style={{
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: '700',
-                color: '#64748b',
+                color: 'var(--color-text-secondary, #4A5D4F)',
                 textTransform: 'uppercase',
+                letterSpacing: '0.06em',
                 marginBottom: '8px',
               }}
             >
               Final Round Score
             </div>
-            <div style={{ fontSize: '42px', fontWeight: '800', color: '#1F4F78' }}>
+            <div
+              style={{
+                fontSize: '46px',
+                fontWeight: '800',
+                color: 'var(--color-text-primary, #00200B)',
+                fontFamily: 'var(--font-display, inherit)',
+              }}
+            >
               {finalSummary?.total_score || 0}%
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => navigate('/dashboard')}
               className="btn-start-coding"
@@ -467,15 +531,8 @@ export default function CodingRoundPage() {
             </button>
             <button
               onClick={() => navigate('/interview/history')}
-              style={{
-                padding: '12px 24px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '10px',
-                background: '#ffffff',
-                color: '#334155',
-                fontWeight: '700',
-                cursor: 'pointer',
-              }}
+              className="session-btn-secondary"
+              style={{ padding: '12px 24px' }}
             >
               View Interview History
             </button>

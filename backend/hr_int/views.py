@@ -24,6 +24,8 @@ from qna_service.services import (
 )
 from qna_service.tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
 from interview_sessions.services.cloudinary_service import CloudinaryService
+from subcription.services import SubscriptionService
+from subcription.models import SubscriptionPlan
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,15 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsAuthenticated])
 def start_hr_interview(request):
     try:
+        # Verify subscription entitlement first before starting/resuming hr interview
+        try:
+            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+            if not is_entitled:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
+
         recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
         if not recent_session or recent_session.is_all_completed():
             session_id = uuid.uuid4()
@@ -43,7 +54,7 @@ def start_hr_interview(request):
                 overall_status="in_progress"
             )
         else:
-            if recent_session.hr_status == "completed":
+            if recent_session.hr_status in {"completed", "in_progress"} and not settings.DEBUG:
                 return Response({
                     "already_completed": True,
                     "error": "You have already completed the HR Round for this interview session. Please complete the remaining rounds or review your history.",
@@ -57,6 +68,15 @@ def start_hr_interview(request):
             interview_session.hr_status = "in_progress"
             interview_session.save()
             session_id = interview_session.id
+
+        # Subscription entitlement verification & consumption
+        try:
+            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
+            if not can_proceed:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
 
         hr_round, created = HrRound.objects.get_or_create(session=interview_session)
         if created or not hr_round.started_at:

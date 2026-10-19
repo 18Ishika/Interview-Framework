@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
+import { startInterview, startHrInterview } from '../../api/interviewApi';
 
 function PrimaryButton({ children, onClick, disabled, style }) {
   const [hovered, setHovered] = useState(false);
@@ -107,7 +110,7 @@ function CheckRow({ icon, label, statusText, state, extra, last }) {
   );
 }
 
-function CheckScreen({ onContinue }) {
+function CheckScreen({ onBegin, loading }) {
   const [camState, setCamState] = useState('idle');
   const [micState, setMicState] = useState('idle');
   const [camMsg, setCamMsg] = useState('Not checked yet');
@@ -176,8 +179,15 @@ function CheckScreen({ onContinue }) {
             {failed ? 'Retry check' : 'Check devices'}
           </PrimaryButton>
         ) : (
-          <PrimaryButton onClick={() => onContinue({ stream: streamRef.current })} style={{ flex: 1 }}>
-            Begin interview →
+          <PrimaryButton onClick={onBegin} disabled={loading} style={{ flex: 1 }}>
+            {loading ? (
+              <>
+                <span style={{ display: 'inline-block', animation: 'spin 0.8s linear infinite', marginRight: 8 }}>↻</span>
+                Starting interview…
+              </>
+            ) : (
+              'Begin interview →'
+            )}
           </PrimaryButton>
         )}
       </div>
@@ -185,7 +195,7 @@ function CheckScreen({ onContinue }) {
   );
 }
 
-function SuccessScreen({ onBeginReal, onRestart }) {
+function SuccessScreen({ onBeginReal, onRestart, loading }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 24px' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
@@ -207,8 +217,15 @@ function SuccessScreen({ onBeginReal, onRestart }) {
         ))}
       </div>
 
-      <PrimaryButton onClick={onBeginReal} style={{ width: '100%', maxWidth: 280, marginBottom: 12 }}>
-        Begin real interview →
+      <PrimaryButton onClick={onBeginReal} disabled={loading} style={{ width: '100%', maxWidth: 280, marginBottom: 12 }}>
+        {loading ? (
+          <>
+            <span style={{ display: 'inline-block', animation: 'spin 0.8s linear infinite', marginRight: 8 }}>↻</span>
+            Starting interview…
+          </>
+        ) : (
+          'Begin real interview →'
+        )}
       </PrimaryButton>
       <div>
         <GhostButton onClick={onRestart} style={{ width: '100%', maxWidth: 280 }}>Start over</GhostButton>
@@ -218,11 +235,95 @@ function SuccessScreen({ onBeginReal, onRestart }) {
 }
 
 export default function InterviewPreflight({ onBeginRealInterview }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { getToken } = useAuth();
+
   const [screen, setScreen] = useState('check');
+  const [starting, setStarting] = useState(false);
+  const [warningModal, setWarningModal] = useState(null);
+
+  const handleBegin = async () => {
+    if (starting) return;
+    setStarting(true);
+    setWarningModal(null);
+
+    const interviewType = location.state?.type || 'technical';
+    const role = location.state?.role || 'Software Developer (Fresher)';
+
+    try {
+      let q = null;
+      if (interviewType === 'hr') {
+        q = await startHrInterview(getToken);
+      } else {
+        q = await startInterview(role, getToken);
+      }
+
+      if (q?.already_completed) {
+        setWarningModal({
+          type: 'already_completed',
+          title: 'Round Already Completed',
+          message: q.error || q.message || 'You have already completed this round for this interview session.',
+          details: q,
+        });
+        return;
+      }
+
+      if (q?.entitlement_exceeded) {
+        setWarningModal({
+          type: 'limit_reached',
+          title: 'Session Limit Reached',
+          message: q.error || q.message || 'Daily session limit reached. Please renew your plan or try again tomorrow.',
+          details: q,
+        });
+        return;
+      }
+
+      if (onBeginRealInterview) {
+        onBeginRealInterview(q);
+      } else {
+        if (interviewType === 'hr') {
+          navigate('/interview/hr', { state: { ...location.state, initialQuestion: q, sessionId: q.session_id } });
+        } else {
+          navigate('/interview/session', { state: { ...location.state, initialQuestion: q, session_id: q.session_id } });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to start interview:', err);
+      const data = err.data || {};
+      const isAlreadyCompleted = Boolean(
+        data.already_completed ||
+        err.message?.toLowerCase().includes('already completed')
+      );
+      const isLimitReached = Boolean(
+        data.entitlement_exceeded ||
+        err.message?.toLowerCase().includes('daily') ||
+        err.message?.toLowerCase().includes('limit') ||
+        err.message?.toLowerCase().includes('subscription') ||
+        err.status === 403
+      );
+
+      setWarningModal({
+        type: isAlreadyCompleted ? 'already_completed' : isLimitReached ? 'limit_reached' : 'error',
+        title: isAlreadyCompleted
+          ? 'Round Already Completed'
+          : isLimitReached
+          ? 'Session Limit Reached'
+          : 'Interview Warning',
+        message: err.message || 'Unable to start interview session.',
+        details: data,
+      });
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
-    <section style={{ background: 'var(--color-bg-secondary)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <section style={{ background: 'var(--color-bg-secondary)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', position: 'relative' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes modalPop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
         {['check', 'success'].map((s) => (
@@ -232,15 +333,145 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
 
       <div style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 600, overflow: 'hidden' }}>
         {screen === 'check' && (
-          <CheckScreen onContinue={() => setScreen('success')} />
+          <CheckScreen onBegin={handleBegin} loading={starting} />
         )}
         {screen === 'success' && (
           <SuccessScreen
-            onBeginReal={() => onBeginRealInterview?.()}
+            onBeginReal={handleBegin}
             onRestart={() => setScreen('check')}
+            loading={starting}
           />
         )}
       </div>
+
+      {/* Pop-up Warning Modal for Round Already Completed or Limit Reached */}
+      {warningModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.55)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'var(--color-bg-primary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '32px 28px',
+            maxWidth: '450px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            animation: 'modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}>
+            {/* Warning Icon */}
+            <div style={{
+              width: 58,
+              height: 58,
+              margin: '0 auto 16px',
+              borderRadius: '50%',
+              background: warningModal.type === 'already_completed' ? '#edf5fc' : '#fef3c7',
+              color: warningModal.type === 'already_completed' ? '#1f4f78' : '#d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 26,
+            }}>
+              {warningModal.type === 'already_completed' ? '✓' : '⚠️'}
+            </div>
+
+            {/* Modal Title */}
+            <h3 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 20,
+              fontWeight: 700,
+              color: 'var(--color-text-primary)',
+              margin: '0 0 10px',
+            }}>
+              {warningModal.title}
+            </h3>
+
+            {/* Modal Message */}
+            <p style={{
+              fontSize: 14,
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.6,
+              margin: '0 0 20px',
+            }}>
+              {warningModal.message}
+            </p>
+
+            {/* Session Breakdown if already completed */}
+            {warningModal.details?.already_completed && (
+              <div style={{
+                background: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                textAlign: 'left',
+              }}>
+                {[
+                  { key: 'coding_status', label: 'Coding Round' },
+                  { key: 'tech_status', label: 'Technical Round' },
+                  { key: 'hr_status', label: 'HR Round' },
+                ].map(({ key, label }) => {
+                  const val = warningModal.details[key] || 'pending';
+                  const pillBg = val === 'completed' ? '#def7ec' : val === 'in_progress' ? '#e1effe' : '#f1f5f9';
+                  const pillColor = val === 'completed' ? '#03543f' : val === 'in_progress' ? '#1e429f' : '#64748b';
+                  return (
+                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        {label}
+                      </span>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        padding: '3px 10px',
+                        borderRadius: 'var(--radius-full)',
+                        background: pillBg,
+                        color: pillColor,
+                      }}>
+                        {val.replace('_', ' ')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {warningModal.type === 'limit_reached' && (
+                <PrimaryButton onClick={() => navigate('/pricing')} style={{ width: '100%' }}>
+                  View Subscription Plans →
+                </PrimaryButton>
+              )}
+              {warningModal.type === 'already_completed' && (
+                <PrimaryButton onClick={() => navigate('/interview')} style={{ width: '100%' }}>
+                  Continue Remaining Rounds
+                </PrimaryButton>
+              )}
+              {warningModal.type === 'already_completed' && (
+                <GhostButton onClick={() => navigate('/interview/history')} style={{ width: '100%' }}>
+                  View Interview History
+                </GhostButton>
+              )}
+              <GhostButton onClick={() => setWarningModal(null)} style={{ width: '100%' }}>
+                Dismiss
+              </GhostButton>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

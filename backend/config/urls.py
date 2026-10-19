@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/tech-int/', include('tech_int.urls')),
     path('api/hr-int/', include('hr_int.urls')),
     path('api/coding-round/', include('coding_round.urls')),
+    path('api/subscriptions/', include('subcription.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -50,17 +50,18 @@ def assemble_and_score_video_task(self, session_id, round_type, total_chunks=Non
         else:
             round_instance, _ = HrRound.objects.get_or_create(session=session)
 
-        if round_type == 'tech':
-            try:
-                behavior_report = VisualBehaviorService(final_video_path, annotate=False).run()
-                round_instance.posture_metric = {
-                    **behavior_report["posture"],
-                    "head_pose": behavior_report["head_pose"],
-                }
-                round_instance.eye_contact_metrics = {
-                    **behavior_report["gaze"],
-                    "blink": behavior_report["blink"],
-                }
+        try:
+            behavior_report = VisualBehaviorService(final_video_path, annotate=False).run()
+            round_instance.posture_metric = {
+                **behavior_report["posture"],
+                "head_pose": behavior_report["head_pose"],
+            }
+            round_instance.eye_contact_metrics = {
+                **behavior_report["gaze"],
+                "blink": behavior_report["blink"],
+            }
+
+            if round_type == 'tech':
                 round_instance.voice_metrics = {
                     "overall_visual_confidence_score": behavior_report["overall_visual_confidence_score"],
                     "duration_seconds": behavior_report["duration_seconds"],
@@ -68,8 +69,15 @@ def assemble_and_score_video_task(self, session_id, round_type, total_chunks=Non
                 }
                 round_instance.save(update_fields=["posture_metric", "eye_contact_metrics", "voice_metrics"])
                 logger.info(f"[Celery] Saved technical behavior metrics for {session_id}")
-            except Exception as behavior_error:
-                logger.exception(f"[Celery] Technical behavior analysis failed for {session_id}: {behavior_error}")
+            else:
+                round_instance.qna_metrics = {
+                    **(round_instance.qna_metrics or {}),
+                    "overall_visual_confidence_score": behavior_report["overall_visual_confidence_score"],
+                }
+                round_instance.save(update_fields=["posture_metric", "eye_contact_metrics", "qna_metrics"])
+                logger.info(f"[Celery] Saved HR behavior metrics for {session_id}")
+        except Exception as behavior_error:
+            logger.exception(f"[Celery] Visual behavior analysis failed for {session_id} ({round_type}): {behavior_error}")
 
         logger.info(f"[Celery] Uploading assembled video to Cloudinary for {session_id}")
         with open(final_video_path, 'rb') as video_file:

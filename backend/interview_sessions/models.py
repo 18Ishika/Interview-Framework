@@ -26,10 +26,26 @@ class Session(models.Model):
 
     def is_all_completed(self):
         return (
+            self.overall_status == "completed" or (
+                self.coding_status == "completed" and
+                self.tech_status == "completed" and
+                self.hr_status == "completed"
+            )
+        )
+
+    def save(self, *args, **kwargs):
+        if (
             self.coding_status == "completed" and
             self.tech_status == "completed" and
             self.hr_status == "completed"
-        )
+        ):
+            self.overall_status = "completed"
+        if kwargs.get("update_fields") is not None:
+            fields = set(kwargs["update_fields"])
+            if self.overall_status == "completed":
+                fields.add("overall_status")
+            kwargs["update_fields"] = list(fields)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Session {self.id} - {self.user.first_name}"

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -17,6 +18,8 @@ from .models import (
     LanguageChoices,
 )
 from .services.judge0_service import Judge0Service
+from subcription.services import SubscriptionService
+from subcription.models import SubscriptionPlan
 
 ROUND_DURATION_MINUTES = 45  # Standard 45-minute coding round
 
@@ -71,7 +74,7 @@ def start_coding_round_view(request):
     recent_session = Session.objects.filter(user=user).order_by("-created_at").first()
 
     session = None
-    if not recent_session or force_new:
+    if not recent_session or recent_session.is_all_completed() or force_new:
         session = Session.objects.create(
             user=user,
             target_role=recent_session.target_role if recent_session else "Software Engineer",
@@ -79,34 +82,35 @@ def start_coding_round_view(request):
             overall_status="in_progress",
         )
     else:
-        if recent_session.is_all_completed():
-            # All rounds of the last session are finished -> Start fresh session
-            session = Session.objects.create(
-                user=user,
-                target_role=recent_session.target_role or "Software Engineer",
-                coding_status="in_progress",
-                overall_status="in_progress",
-            )
-        else:
-            # Candidate attempted a round that is already completed in active session
-            if recent_session.coding_status == "completed":
+        # Candidate attempted a round that is already completed in active session
+        if recent_session.coding_status == "completed" and not (settings.DEBUG or force_new):
+            return Response({
+                "success": False,
+                "already_completed": True,
+                "message": "You have already completed the Coding Round for this interview session. Please proceed to the remaining rounds (Technical or HR) to complete your interview.",
+                "session_id": str(recent_session.id),
+                "coding_status": recent_session.coding_status,
+                "tech_status": recent_session.tech_status,
+                "hr_status": recent_session.hr_status,
+            }, status=status.HTTP_200_OK)
+
+        # coding_status is 'pending' or 'in_progress' -> Use recent_session
+        session = recent_session
+        session.coding_status = "in_progress"
+        session.save(update_fields=["coding_status", "updated_at"])
+
+    # Subscription entitlement verification & consumption
+    try:
+        can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(user, session)
+        if not can_proceed:
+            if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
                 return Response({
                     "success": False,
-                    "already_completed": True,
-                    "message": "You have already completed the Coding Round for this interview session. Please proceed to the remaining rounds (Technical or HR) to complete your interview.",
-                    "session_id": str(recent_session.id),
-                    "coding_status": recent_session.coding_status,
-                    "tech_status": recent_session.tech_status,
-                    "hr_status": recent_session.hr_status,
-                }, status=status.HTTP_200_OK)
-
-
-            # coding_status is 'pending' or 'in_progress' -> Use recent_session
-            session = recent_session
-            session.coding_status = "in_progress"
-            session.save(update_fields=["coding_status", "updated_at"])
-
-
+                    "error": reason,
+                    "entitlement_exceeded": True,
+                }, status=status.HTTP_403_FORBIDDEN)
+    except Exception:
+        pass
 
     # 2. Get or create CodingRound
     coding_round, created = CodingRound.objects.get_or_create(session=session)

@@ -13,8 +13,13 @@ async function authFetch(url, options = {}, getToken) {
     ...options.headers,
   };
   const res = await fetch(url, { ...options, headers ,credentials:"include"});
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Something went wrong");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || data.message || "Something went wrong");
+    err.data = data;
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 

@@ -21,6 +21,7 @@ import Signup from './pages/auth/signup';
 import Dashboard from './pages/Dashboard';
 import IQCardPage from './pages/profile/IQCardPage';
 import CodingRoundPage from './pages/coding/CodingRoundPage';
+import PricingPage from './pages/PricingPage';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -59,11 +60,11 @@ function PreflightPage() {
   const location = useLocation();
   return (
     <ProtectedRoute>
-      <InterviewPreflight onBeginRealInterview={() => {
+      <InterviewPreflight onBeginRealInterview={(initialQuestion) => {
         if (location.state?.type === 'hr') {
-          navigate('/interview/hr', { state: location.state });
+          navigate('/interview/hr', { state: { ...location.state, initialQuestion, sessionId: initialQuestion?.session_id } });
         } else {
-          navigate('/interview/session', { state: location.state });
+          navigate('/interview/session', { state: { ...location.state, initialQuestion, session_id: initialQuestion?.session_id } });
         }
       }} />
     </ProtectedRoute>
@@ -100,9 +101,9 @@ function App() {
             <ProtectedRoute><CodingRoundPage /></ProtectedRoute>
           } />
 
-          {/* Public IQ Card */}
           {/* App shell with sidebar */}
           <Route element={<AppLayout />}>
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/profile/iq-card/:platformId" element={<IQCardPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />

@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -17,6 +18,8 @@ from qna_service.services import (
     generate_question_audio
 )
 from recording_service.services import handle_upload_chunk, handle_finish_upload
+from subcription.services import SubscriptionService
+from subcription.models import SubscriptionPlan
 
 @api_view(["POST"])
 @authentication_classes([ClerkAuthentication])
@@ -28,6 +31,15 @@ def start_interview_view(request):
 
         if not role_name:
             return Response({"error": "Role is required"}, status=400)
+
+        # Verify subscription entitlement first before starting/resuming tech interview
+        try:
+            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+            if not is_entitled:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
 
         if not session_id:
             recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
@@ -41,7 +53,7 @@ def start_interview_view(request):
                 )
                 session_id = interview_session.id
             else:
-                if recent_session.tech_status == "completed":
+                if recent_session.tech_status in {"completed", "evaluating"} and not settings.DEBUG:
                     return Response({
                         "already_completed": True,
                         "error": "You have already completed the Technical Round for this interview session. Please complete the remaining rounds or review your history.",
@@ -64,6 +76,15 @@ def start_interview_view(request):
             )
             interview_session.tech_status = "in_progress"
             interview_session.save()
+
+        # Subscription entitlement verification & consumption
+        try:
+            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
+            if not can_proceed:
+                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+                    return Response({"error": reason, "entitlement_exceeded": True}, status=403)
+        except Exception:
+            pass
 
         tech_round, _ = TechnicalRound.objects.get_or_create(session=interview_session)
         if not tech_round.started_at:
