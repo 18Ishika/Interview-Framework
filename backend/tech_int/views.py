@@ -34,8 +34,6 @@ def start_interview_view(request):
 
         # Verify subscription entitlement first before starting/resuming tech interview
         try:
-            from subcription.services import SubscriptionService
-            from subcription.models import SubscriptionPlan
             is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
             if not is_entitled:
                 if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):

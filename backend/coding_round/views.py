@@ -18,6 +18,8 @@ from .models import (
     LanguageChoices,
 )
 from .services.judge0_service import Judge0Service
+from subcription.services import SubscriptionService
+from subcription.models import SubscriptionPlan
 
 ROUND_DURATION_MINUTES = 45  # Standard 45-minute coding round
 
@@ -99,8 +101,6 @@ def start_coding_round_view(request):
 
     # Subscription entitlement verification & consumption
     try:
-        from subcription.services import SubscriptionService
-        from subcription.models import SubscriptionPlan
         can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(user, session)
         if not can_proceed:
             if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):

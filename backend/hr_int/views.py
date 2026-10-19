@@ -24,6 +24,8 @@ from qna_service.services import (
 )
 from qna_service.tasks import evaluate_single_answer_task, finalize_evaluation_chord_task
 from interview_sessions.services.cloudinary_service import CloudinaryService
+from subcription.services import SubscriptionService
+from subcription.models import SubscriptionPlan
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,6 @@ def start_hr_interview(request):
     try:
         # Verify subscription entitlement first before starting/resuming hr interview
         try:
-            from subcription.services import SubscriptionService
-            from subcription.models import SubscriptionPlan
             is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
             if not is_entitled:
                 if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
@@ -71,8 +71,6 @@ def start_hr_interview(request):
 
         # Subscription entitlement verification & consumption
         try:
-            from subcription.services import SubscriptionService
-            from subcription.models import SubscriptionPlan
             can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
             if not can_proceed:
                 if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
