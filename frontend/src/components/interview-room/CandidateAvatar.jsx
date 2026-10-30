@@ -8,7 +8,7 @@ export default function CandidateAvatar({ url = '/avatars/candidate.glb', speaki
   return (
     <group name="candidate-slot" position={position} rotation={[0, rotationY, 0]}>
       <Chair color="#252a33" />
-      {children ?? <GlbAvatar url={url} speaking={speaking} phase={0} pose="clasped" />}
+      {children ?? <GlbAvatar url={url} speaking={speaking} phase={0} pose="clasped" mood="friendly" />}
     </group>
   )
 }

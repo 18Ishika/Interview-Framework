@@ -12,32 +12,60 @@ const FORE_RE = /(fore|lower).?arm/i
 const TWIST_RE = /twist|roll|helper|share|corrective/i
 
 // ---- jaw knobs ----
-const TALK_SPEED = 9 // lower = slower mouth (try 3 for very slow, 5 for faster)
-const TALK_OPEN = 0.45 // max jaw opening 0..1 (higher = wider mouth)
-const TALK_SMOOTH = 12 // higher = snappier, lower = softer
+const TALK_OPEN = 0.65 // max jaw opening 0..1 (higher = wider mouth)
+const TALK_SMOOTH = 16 // higher = snappier, lower = softer
+
+// ---- moods (ARKit / Ready Player Me blendshapes) ----
+const MOODS = {
+  neutral: { smile: 0.1, browUp: 0, browDown: 0, squint: 0 },
+  friendly: { smile: 0.35, browUp: 0.15, browDown: 0, squint: 0.15 },
+  serious: { smile: 0, browUp: 0, browDown: 0.25, squint: 0.05 },
+  curious: { smile: 0.1, browUp: 0.4, browDown: 0, squint: 0 },
+}
 
 // Pose notes:
-//  A) across / y / reach|fwd  -> absolute wrist position (lap, clasped)
+//  A) across / drop|y / reach|fwd -> wrist target (lap, clasped, thighs)
+//     across: 1 = straight under own shoulder, 0 = body centre
+//     drop: how far BELOW the shoulder the wrist sits (m) -> works for any model size
+//     reach: 0..1 of full arm length (higher = hands further forward)
 //  B) onArm {along,out,fwd,thick,back} -> hand lands ON the opposite upper arm (crossed)
 //  dz: extra forward offset for the left-side arm | pole: elbow direction
 //  fingers: finger direction | curl/curlAmt: finger wrap | lean: torso tilt | spread: shoulder widen (m)
 const POSES = {
-  lap: {
-    across: 0.9,
-    y: 0.68,
-    reach: 0.85,
-    pole: [0.5, -1, -0.4],
-    fingers: [-0.1, -0.4, 1],
-    lean: 0,
-  },
+  // candidate: relaxed, hands loosely clasped at belly level
   clasped: {
-    across: 0.25,
-    y: 0.82,
-    reach: 0.78,
-    pole: [0.9, -0.5, -0.3],
-    fingers: [-0.6, -0.1, 1],
-    lean: 0.2,
+    across: 0.3,
+    drop: 0.32,
+    reach: 0.72,
+    pole: [0.6, -1, -0.2],
+    fingers: [-0.7, -0.3, 0.8],
+    curl: [-0.4, -0.7, 0.3],
+    curlAmt: 0.35,
+    dz: 0.03,
+    lean: 0.1,
   },
+  // hands resting in lap, one over the other
+  lap: {
+    across: 0.55,
+    drop: 0.42,
+    reach: 0.92,
+    pole: [0.5, -1, -0.4],
+    fingers: [-0.35, -0.4, 1],
+    curl: [-0.3, -0.8, 0.4],
+    curlAmt: 0.3,
+    dz: 0.03,
+    lean: 0.05,
+  },
+  // hands flat on thighs, upright and attentive (good for interviewer)
+  thighs: {
+    across: 1,
+    drop: 0.46,
+    reach: 0.95,
+    pole: [0.9, -1, -0.5],
+    fingers: [-0.1, -0.25, 1],
+    lean: 0.03,
+  },
+  // arms crossed
   crossed: {
     onArm: { along: 0.8, out: 0.15, fwd: 0.45, thick: 0.05, back: 0.12 },
     dz: 0.04,
@@ -66,6 +94,12 @@ const _v = new THREE.Vector3()
 
 const wp = (o) => o.getWorldPosition(new THREE.Vector3())
 const r3 = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)]
+
+// set a morph target by (lowercase) name on every mesh that has it
+const setM = (map, name, v) => {
+  const list = map[name]
+  if (list) for (const { inf, i } of list) inf[i] = v
+}
 
 const findBone = (root, re) => {
   let hit = null
@@ -208,7 +242,8 @@ function wristTarget(S, L1, L2, side, pose, k) {
   }
 
   const tx = side * pose.across * Math.abs(S.x)
-  const ty = pose.y
+  // relative to shoulder when `drop` is given, else absolute y
+  const ty = pose.drop != null ? S.y - pose.drop * k : pose.y
   let dz
   if (pose.fwd != null) {
     dz = pose.fwd * k
@@ -307,12 +342,14 @@ function placeArms(m, poseDef, k, url) {
 }
 
 // Loads a full-body GLB, scales it, seats it, poses the arms with IK, and adds idle
-// animation (breathing, head sway, blinking) plus a talking jaw while `speaking` is true.
+// animation (breathing, head sway, blinking, gaze drift, mood) plus a talking jaw
+// while `speaking` is true.
 export default function GlbAvatar({
   url,
   height = 1.7,
   seatedTop = 1.37,
   pose = 'clasped',
+  mood = 'friendly',
   speaking = false,
   phase = 0,
   debug = false,
@@ -322,6 +359,19 @@ export default function GlbAvatar({
   const mouth = useRef(0)
   const wrap = useRef()
   const dbg = useRef([])
+  const anim = useRef({
+    sylT: 0,
+    open: 0,
+    shape: 0.5,
+    browKick: 0,
+    smile: 0,
+    brow: 0,
+    gazeT: 2,
+    gx: 0,
+    gy: 0,
+    cgx: 0,
+    cgy: 0,
+  })
 
   const { model, rig } = useMemo(() => {
     const m = SkeletonUtils.clone(scene)
@@ -351,6 +401,7 @@ export default function GlbAvatar({
     const { ok: armsOk, targets } = placeArms(m, poseDef, height / 1.7, url)
 
     const morphs = []
+    const morphMap = {}
     const blinkNames = []
     const mouthNames = []
     m.traverse((o) => {
@@ -360,6 +411,10 @@ export default function GlbAvatar({
       if (o.morphTargetDictionary && o.morphTargetInfluences) {
         morphs.push(o)
         for (const n of Object.keys(o.morphTargetDictionary)) {
+          ;(morphMap[n.toLowerCase()] ??= []).push({
+            inf: o.morphTargetInfluences,
+            i: o.morphTargetDictionary[n],
+          })
           if (BLINK_RE.test(n)) blinkNames.push(n)
           if (MOUTH_RE.test(n)) mouthNames.push(n)
         }
@@ -367,8 +422,13 @@ export default function GlbAvatar({
     })
 
     const head = headBone
+    const jaw = findBone(m, /jaw$/i)
     const chest = findBone(m, /spine2$/i) ?? findBone(m, /spine1$/i) ?? spine
-    const base = { head: head?.rotation.clone(), chest: chest?.rotation.clone() }
+    const base = {
+      head: head?.rotation.clone(),
+      chest: chest?.rotation.clone(),
+      jaw: jaw?.rotation.clone(),
+    }
 
     console.log('GLB rig', {
       url,
@@ -376,31 +436,81 @@ export default function GlbAvatar({
       armsOk,
       head: head?.name,
       chest: chest?.name,
+      jaw: jaw?.name,
       blink: blinkNames,
       mouth: mouthNames,
     })
     if (!blinkNames.length) console.warn('No blink blendshapes in', url)
     if (!mouthNames.length) console.warn('No jaw/mouth blendshapes in', url)
 
-    return { model: m, rig: { head, chest, base, morphs, hands: findHands(m), targets } }
+    return {
+      model: m,
+      rig: {
+        head,
+        chest,
+        jaw,
+        base,
+        morphs,
+        morphMap,
+        hasMouth: mouthNames.length > 0,
+        hands: findHands(m),
+        targets,
+      },
+    }
   }, [scene, height, seatedTop, pose, url])
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime + phase
-    const { head, chest, base, morphs, hands } = rig
+    const { head, chest, jaw, base, morphs, morphMap, hands } = rig
+    const A = anim.current
+    const M = MOODS[mood] ?? MOODS.neutral
 
+    // ---- talking: random syllables, word gaps, pauses ----
+    A.sylT -= delta
+    if (speaking) {
+      if (A.sylT <= 0) {
+        A.sylT = 0.07 + Math.random() * 0.14
+        A.open = Math.random() < 0.12 ? 0.05 : 0.25 + Math.random() * 0.75
+        A.shape = Math.random() // 0 = round (oo), 1 = wide (ee)
+        if (Math.random() < 0.15) A.sylT += 0.25 // pause between words
+        if (Math.random() < 0.2) A.browKick = 0.3 + Math.random() * 0.4
+      }
+    } else {
+      A.open = 0
+      A.shape = 0.5
+    }
+    mouth.current = THREE.MathUtils.damp(mouth.current, A.open * TALK_OPEN, TALK_SMOOTH, delta)
+    const mouthV = mouth.current
+    A.browKick = THREE.MathUtils.damp(A.browKick, 0, 6, delta)
+
+    // ---- gaze drift ----
+    A.gazeT -= delta
+    if (A.gazeT <= 0) {
+      A.gazeT = 1.5 + Math.random() * 2.5
+      A.gx = (Math.random() - 0.5) * 1.2
+      A.gy = (Math.random() - 0.5) * 0.6
+    }
+    A.cgx = THREE.MathUtils.damp(A.cgx, A.gx, 10, delta)
+    A.cgy = THREE.MathUtils.damp(A.cgy, A.gy, 10, delta)
+
+    // ---- body ----
     if (chest) chest.rotation.x = base.chest.x + Math.sin(t * 1.3) * 0.012
 
     if (head) {
       const cycle = (t % 9) / 9
       const nod = cycle > 0.85 ? Math.sin(((cycle - 0.85) / 0.15) * Math.PI) * 0.12 : 0
+      const talkNod = speaking ? Math.sin(t * 2.3) * 0.02 * Math.min(1, mouthV * 2) : 0
       head.rotation.set(
-        base.head.x + nod + Math.sin(t * 0.5) * 0.015,
-        base.head.y + Math.sin(t * 0.37) * 0.05,
+        base.head.x + nod + talkNod + Math.sin(t * 0.5) * 0.015 + A.cgy * -0.03,
+        base.head.y + Math.sin(t * 0.37) * 0.05 + A.cgx * 0.05,
         base.head.z + Math.sin(t * 0.29) * 0.01,
       )
     }
 
+    // jaw bone fallback when the model has no jawOpen blendshape
+    if (jaw && base.jaw && !rig.hasMouth) jaw.rotation.x = base.jaw.x + mouthV * 0.35
+
+    // ---- blink ----
     const b = blink.current
     b.next -= delta
     if (b.next <= 0 && b.t < 0) {
@@ -414,16 +524,7 @@ export default function GlbAvatar({
       if (b.t >= 0.15) b.t = -1
     }
 
-    // talking jaw: slow, uneven open/close, eased open and shut
-    const tt = state.clock.elapsedTime + phase
-    const talk = speaking
-      ? (0.5 + 0.5 * Math.sin(tt * TALK_SPEED)) *
-        (0.6 + 0.4 * Math.sin(tt * TALK_SPEED * 0.37 + 1)) *
-        TALK_OPEN
-      : 0
-    mouth.current = THREE.MathUtils.damp(mouth.current, talk, TALK_SMOOTH, delta)
-    const mouthV = mouth.current
-
+    // ---- blink + jaw open ----
     for (const o of morphs) {
       const d = o.morphTargetDictionary
       const inf = o.morphTargetInfluences
@@ -433,6 +534,42 @@ export default function GlbAvatar({
       }
     }
 
+    // ---- expressions ----
+    A.smile = THREE.MathUtils.damp(A.smile, M.smile + (speaking ? A.shape * mouthV * 0.3 : 0), 3, delta)
+    A.brow = THREE.MathUtils.damp(A.brow, M.browUp + A.browKick, 8, delta)
+
+    setM(morphMap, 'mouthsmileleft', A.smile)
+    setM(morphMap, 'mouthsmileright', A.smile)
+    setM(morphMap, 'cheeksquintleft', A.smile * 0.5)
+    setM(morphMap, 'cheeksquintright', A.smile * 0.5)
+    setM(morphMap, 'eyesquintleft', M.squint + A.smile * 0.2)
+    setM(morphMap, 'eyesquintright', M.squint + A.smile * 0.2)
+
+    setM(morphMap, 'browinnerup', A.brow)
+    setM(morphMap, 'browouterupleft', A.brow * 0.6)
+    setM(morphMap, 'browouterupright', A.brow * 0.6)
+    setM(morphMap, 'browdownleft', M.browDown)
+    setM(morphMap, 'browdownright', M.browDown)
+
+    // mouth shapes while talking (round vs wide)
+    setM(morphMap, 'mouthfunnel', (1 - A.shape) * mouthV * 0.5)
+    setM(morphMap, 'mouthpucker', (1 - A.shape) * mouthV * 0.25)
+    setM(morphMap, 'mouthstretchleft', A.shape * mouthV * 0.3)
+    setM(morphMap, 'mouthstretchright', A.shape * mouthV * 0.3)
+    setM(morphMap, 'mouthlowerdownleft', mouthV * 0.3)
+    setM(morphMap, 'mouthlowerdownright', mouthV * 0.3)
+
+    // eyes
+    setM(morphMap, 'eyelookoutleft', Math.max(-A.cgx, 0))
+    setM(morphMap, 'eyelookinright', Math.max(-A.cgx, 0))
+    setM(morphMap, 'eyelookinleft', Math.max(A.cgx, 0))
+    setM(morphMap, 'eyelookoutright', Math.max(A.cgx, 0))
+    setM(morphMap, 'eyelookupleft', Math.max(A.cgy, 0))
+    setM(morphMap, 'eyelookupright', Math.max(A.cgy, 0))
+    setM(morphMap, 'eyelookdownleft', Math.max(-A.cgy, 0))
+    setM(morphMap, 'eyelookdownright', Math.max(-A.cgy, 0))
+
+    // ---- debug markers ----
     if (debug && wrap.current) {
       hands.forEach((h, i) => {
         const s = dbg.current[i]

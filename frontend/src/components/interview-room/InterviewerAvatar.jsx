@@ -8,7 +8,7 @@ export default function InterviewerAvatar({ url = '/avatars/interviewer.glb', sp
   return (
     <group name="interviewer-slot" position={position} rotation={[0, rotationY, 0]}>
       <Chair color="#252a33" />
-      {children ?? <GlbAvatar url={url} speaking={speaking} phase={4.3} pose="crossed" />}
+      {children ?? <GlbAvatar url={url} speaking={speaking} phase={1.7} pose="thighs" mood="serious" /> }
     </group>
   )
 }

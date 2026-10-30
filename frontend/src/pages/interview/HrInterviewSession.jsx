@@ -4,72 +4,97 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { startHrInterview, evaluateHrAnswer, getHrQnaResults, fetchHrQuestionAudio } from "../../api/interviewApi";
 import { useInterviewRecording } from "../../hooks/useInterviewRecording";
+import InterviewRoom from "../../components/interview-room/InterviewRoom";
+import "../../styles/virtual-interview.css";
 import "./InterviewSession.css";
 
-function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit, startAnswerRecording, stopAnswerRecording }) {
+function stopWithTimeout(stop, message) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error(message)), 8000);
+    Promise.resolve()
+      .then(stop)
+      .then(
+        (result) => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        }
+      );
+  });
+}
+
+function QuestionPanel({ question, onSubmit, loading, audioUrl, onReplay, onExit, startAnswerRecording, stopAnswerRecording }) {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
 
-  const startRec = () => {
-    startAnswerRecording();
-    setRecording(true);
-    setAudioBlob(null);
-    setAudioURL(null);
+  const startRec = async () => {
+    try {
+      await startAnswerRecording();
+      setRecording(true);
+      setAudioBlob(null);
+      setAudioURL(null);
+    } catch (error) {
+      console.error("Recording start failed:", error);
+    }
   };
 
   const stopRec = async () => {
-    const blob = await stopAnswerRecording();
-    if (blob) {
-      setAudioBlob(blob);
-      setAudioURL(URL.createObjectURL(blob));
+    try {
+      const blob = await stopAnswerRecording();
+      if (blob) {
+        setAudioBlob(blob);
+        setAudioURL(URL.createObjectURL(blob));
+      }
+    } catch (error) {
+      console.error("Recording stop failed:", error);
+    } finally {
+      setRecording(false);
     }
-    setRecording(false);
   };
   
   const pct = Math.round((question.question_number / question.total_questions) * 100);
 
   return (
-    <div className="is-panel">
-      <div className="is-progress-wrap">
-        <div className="is-progress-fill" style={{ width: `${pct}%` }} />
+    <section className="irs-panel" aria-live="polite">
+      <div className="irs-progress">
+        <div className="irs-progress__fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="is-progress-label">Question {question.question_number} of {question.total_questions}</p>
-      <div className="is-badge">{question.topic} · {question.concept}</div>
-      <div className="is-question-box">
-        <p className="is-question-text">{question.question}</p>
+      <div className="irs-meta">
+        <span>Question {question.question_number} of {question.total_questions}</span>
+        <span className="irs-badge">{question.topic} · {question.concept}</span>
       </div>
-      <div className="is-question-actions">
-        <button className="is-btn-ghost" onClick={() => audioUrl && new Audio(audioUrl).play()}>
-          🔊 Replay Question
-        </button>
-        <button className="is-btn-danger" onClick={onExit}>
-          ✕ Exit Interview
-        </button>
-      </div>
-      <div className="is-recorder">
-        {!audioBlob && !recording && (
-          <button className="is-btn-record" onClick={startRec}>🎙 Start Recording</button>
-        )}
-        {recording && (
-          <>
-            <div className="is-rec-indicator"><span className="is-dot" /> Recording…</div>
-            <button className="is-btn-stop" onClick={stopRec}>⏹ Stop</button>
-          </>
-        )}
-        {audioBlob && (
-          <div className="is-audio-review">
-            <audio controls src={audioURL} style={{ width: "100%" }} />
-            <div className="is-audio-actions">
-              <button className="is-btn-ghost" onClick={() => { setAudioBlob(null); setAudioURL(null); }}>Re-record</button>
-              <button className="is-btn-primary" style={{ opacity: loading ? 0.5 : 1 }} onClick={() => onSubmit(audioBlob)} disabled={loading}>
-                {loading ? "Evaluating…" : "Submit Answer →"}
+      <p className="irs-question">{question.question}</p>
+      <div className="irs-actions">
+        <div className="irs-actions__left">
+          <button className="irs-btn" onClick={onReplay} disabled={!audioUrl}>🔊 Replay</button>
+          <button className="irs-btn irs-btn--danger" onClick={onExit}>✕ Exit</button>
+        </div>
+        <div className="irs-actions__right">
+          {!audioBlob && !recording && (
+            <button className="irs-btn irs-btn--record" onClick={startRec}>🎙 Start recording</button>
+          )}
+          {recording && (
+            <>
+              <span className="irs-rec"><i /> Recording…</span>
+              <button className="irs-btn irs-btn--stop" onClick={stopRec}>⏹ Stop</button>
+            </>
+          )}
+          {audioBlob && (
+            <>
+              <audio controls src={audioURL} className="irs-audio" />
+              <button className="irs-btn" onClick={() => { setAudioBlob(null); setAudioURL(null); }}>Re-record</button>
+              <button className="irs-btn irs-btn--primary" onClick={() => onSubmit(audioBlob)} disabled={loading}>
+                {loading ? "Evaluating…" : "Submit answer →"}
               </button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -101,9 +126,13 @@ export default function HrInterviewSession() {
   const [question, setQuestion] = useState(null);
   const [sessionId, setSessionId] = useState(location.state?.sessionId || null);
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [userSpeaking, setUserSpeaking] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
+  const exitingRef = useRef(false);
 
   const {
     videoStream,
@@ -123,12 +152,42 @@ export default function HrInterviewSession() {
     }
   }, [videoStream]);
 
+  const playAudio = (url) => {
+    audioRef.current?.pause();
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onplay = () => setSpeaking(true);
+    audio.onended = () => setSpeaking(false);
+    audio.onpause = () => setSpeaking(false);
+    audio.onerror = () => setSpeaking(false);
+    audio.play().catch(() => setSpeaking(false));
+  };
+
   const playQuestionAudio = async () => {
     try {
       const url = await fetchHrQuestionAudio(getToken);
       setQuestionAudioUrl(url);
-      new Audio(url).play();
+      playAudio(url);
     } catch (e) { console.error("Audio fetch failed", e); }
+  };
+
+  const handleReplay = () => {
+    if (questionAudioUrl) playAudio(questionAudioUrl);
+  };
+
+  const startAnswer = async () => {
+    audioRef.current?.pause();
+    setSpeaking(false);
+    await startAnswerRecording();
+    setUserSpeaking(true);
+  };
+
+  const stopAnswer = async () => {
+    try {
+      return await stopAnswerRecording();
+    } finally {
+      setUserSpeaking(false);
+    }
   };
 
   const handleStart = async () => {
@@ -159,10 +218,13 @@ export default function HrInterviewSession() {
   }, [sessionId, videoStream, isRecording, isFinishing, startBackgroundVideoRecording]);
 
   useEffect(() => {
+    // Interview setup intentionally initializes state from this mount effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     handleStart();
     
     return () => {
       // Cleanup hook handles stream stop, but we want to ensure stopBackgroundVideoRecording isn't missed on unmount
+      audioRef.current?.pause();
       if (isRecording) {
         stopBackgroundVideoRecording();
       }
@@ -193,59 +255,69 @@ export default function HrInterviewSession() {
   };
 
   const handleExit = async () => {
-    await stopBackgroundVideoRecording();
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    clearSession();
-    navigate('/dashboard');
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+    audioRef.current?.pause();
+    setUserSpeaking(false);
+
+    try {
+      try {
+        await stopWithTimeout(
+          stopAnswerRecording,
+          "Timed out stopping answer recording."
+        );
+      } catch (e) {
+        console.error("Answer recording stop failed:", e);
+      }
+
+      try {
+        await stopWithTimeout(
+          stopBackgroundVideoRecording,
+          "Timed out stopping background recording."
+        );
+      } catch (e) {
+        console.error("Background recording stop failed:", e);
+      }
+    } finally {
+      videoStream?.getTracks().forEach((track) => track.stop());
+      if (videoRef.current) videoRef.current.srcObject = null;
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      clearSession();
+      navigate("/interview", { replace: true });
+    }
   };
 
   return (
-    <div className="is-page">
-      {/* Background continuous video feed pinned to the top right using user requested styling */}
-      <div className="is-camera-feed" style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        width: '240px',
-        height: '180px',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-        zIndex: 1000,
-        backgroundColor: '#1E1E1E',
-        border: '2px solid var(--primary)'
-      }}>
+    <div className="irs-page">
+      <div className="irs-room">
+        <InterviewRoom motionEnabled speaking={speaking} candidateSpeaking={userSpeaking} />
+      </div>
+
+      <div className="irs-camera">
         {videoStream ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-          />
+          <video ref={videoRef} autoPlay muted playsInline />
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>
-            Camera Off
-          </div>
+          <div className="irs-camera__off">Camera Off</div>
         )}
+        {isRecording && <span className="irs-camera__rec"><i /> REC</span>}
       </div>
 
       {(error || videoError) && (
-        <div className="is-error-banner">
+        <div className="irs-error">
           ⚠️ {error || videoError}
-          <button onClick={() => { setError(null); }} className="is-error-close">✕</button>
+          <button onClick={() => { setError(null); }}>✕</button>
         </div>
       )}
       {(phase === "loading" || phase === "redirecting") && (
-        <div className="is-centered">
-          <h2 className="is-heading">Starting your HR interview…</h2>
-          <p className="is-sub">Setting things up and accessing your camera.</p>
+        <div className="irs-center">
+          <h2>Starting your HR interview…</h2>
+          <p>Setting things up and accessing your camera.</p>
         </div>
       )}
       {phase === "completing" && (
-        <div className="is-centered">
-          <h2 className="is-heading">Finishing up…</h2>
-          <p className="is-sub">Saving your background video and wrapping up your session. Please do not close this window.</p>
+        <div className="irs-center">
+          <h2>Finishing up…</h2>
+          <p>Saving your background video and wrapping up your session. Please do not close this window.</p>
         </div>
       )}
       {phase === "question" && question && (
@@ -255,9 +327,10 @@ export default function HrInterviewSession() {
           onSubmit={handleSubmit}
           loading={loading || isFinishing}
           audioUrl={questionAudioUrl}
+          onReplay={handleReplay}
           onExit={handleExit}
-          startAnswerRecording={startAnswerRecording}
-          stopAnswerRecording={stopAnswerRecording}
+          startAnswerRecording={startAnswer}
+          stopAnswerRecording={stopAnswer}
         />
       )}
     </div>
