@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './InterviewSetup.css';
+import { startSession } from '../../utils/sessionFlow';
 
 const ROLES = [
   "Backend Developer (Fresher)",
@@ -71,10 +72,60 @@ export default function InterviewSetup() {
     });
   }
 
+  function handleStartSession() {
+    const role = selectedRole || ROLES[0];
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    startSession(navigate, { role, jd });
+  }
+
   return (
     <div className="is-page">
       <h1 className="is-title">Set up your interview</h1>
       <p className="is-sub">Configure the session before entering the interview room.</p>
+
+      {/* Start full session option */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <button
+          type="button"
+          className="is-btn-primary"
+          style={{
+            width: '100%',
+            padding: '14px 28px',
+            fontSize: '15px',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+          onClick={handleStartSession}
+          title="Runs Coding, Technical, and HR rounds sequentially in one go"
+        >
+          Start a Session
+        </button>
+      </div>
+
+      {/* OR divider with padding */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '0.75rem 0 1.75rem',
+        }}
+      >
+        <div style={{ flex: 1, height: '1px', background: 'var(--color-border-strong)' }} />
+        <span
+          style={{
+            fontSize: '13px',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            color: 'var(--color-text-muted)',
+            textTransform: 'uppercase',
+            padding: '0 8px',
+          }}
+        >
+          OR
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'var(--color-border-strong)' }} />
+      </div>
 
       {/* Type selector */}
       <div className="is-section">

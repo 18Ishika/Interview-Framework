@@ -74,7 +74,12 @@ def start_coding_round_view(request):
     recent_session = Session.objects.filter(user=user).order_by("-created_at").first()
 
     session = None
-    if not recent_session or recent_session.is_all_completed() or force_new:
+    if (
+        not recent_session
+        or recent_session.is_all_completed()
+        or force_new
+        or (settings.DEBUG and recent_session.coding_status == "completed")
+    ):
         session = Session.objects.create(
             user=user,
             target_role=recent_session.target_role if recent_session else "Software Engineer",
@@ -100,17 +105,17 @@ def start_coding_round_view(request):
         session.save(update_fields=["coding_status", "updated_at"])
 
     # Subscription entitlement verification & consumption
-    try:
-        can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(user, session)
-        if not can_proceed:
-            if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+    if not settings.DEBUG:
+        try:
+            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(user, session)
+            if not can_proceed:
                 return Response({
                     "success": False,
                     "error": reason,
                     "entitlement_exceeded": True,
                 }, status=status.HTTP_403_FORBIDDEN)
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     # 2. Get or create CodingRound
     coding_round, created = CodingRound.objects.get_or_create(session=session)
@@ -145,6 +150,10 @@ def start_coding_round_view(request):
     elapsed_seconds = int((timezone.now() - coding_round.started_at).total_seconds())
     total_seconds = ROUND_DURATION_MINUTES * 60
     remaining_seconds = max(0, total_seconds - elapsed_seconds)
+    if settings.DEBUG and remaining_seconds == 0:
+        coding_round.started_at = timezone.now()
+        coding_round.save(update_fields=["started_at"])
+        remaining_seconds = total_seconds
 
     # 5. Format questions data (ONLY Python, Java, C++)
     allowed_langs = [LanguageChoices.PYTHON, LanguageChoices.JAVA, LanguageChoices.CPP]

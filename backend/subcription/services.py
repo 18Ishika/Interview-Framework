@@ -337,6 +337,9 @@ class SubscriptionService:
         3. Calendar validity (for calendar-based plans)
         4. Daily session limit for the current local date (Asia/Kolkata)
         """
+        if settings.DEBUG:
+            return True, "Entitled (DEBUG bypass)", None
+
         sub = cls.get_active_subscription(user)
         if not sub:
             return False, "You do not have an active subscription. Please subscribe to start an interview session.", None
@@ -407,6 +410,9 @@ class SubscriptionService:
         interview attempt do NOT consume extra sessions.
         Uses database row locking on Subscription to prevent race conditions.
         """
+        if settings.DEBUG:
+            return True, "Entitled (DEBUG bypass)", None
+
         # 1. Idempotency check: has this session already been counted?
         existing_usage = InterviewSessionUsage.objects.filter(session=session).first()
         if existing_usage:
@@ -461,6 +467,9 @@ class SubscriptionService:
         it permits it immediately without consuming again.
         Otherwise validates entitlement and consumes 1 session attempt.
         """
+        if settings.DEBUG:
+            return True, None
+
         if InterviewSessionUsage.objects.filter(session=session).exists():
             return True, None
 

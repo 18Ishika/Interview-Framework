@@ -1,3 +1,4 @@
+import { goNext, clearSession, isSessionActive } from '../../utils/sessionFlow';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
@@ -72,7 +73,26 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit, startAns
   );
 }
 
+
+function useAutoFullscreen() {
+  useEffect(() => {
+    const enter = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+    };
+    enter();
+    window.addEventListener("click", enter, { once: true });
+    window.addEventListener("keydown", enter, { once: true });
+    return () => {
+      window.removeEventListener("click", enter);
+      window.removeEventListener("keydown", enter);
+    };
+  }, []);
+}
+
 export default function HrInterviewSession() {
+  useAutoFullscreen();
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -157,8 +177,13 @@ export default function HrInterviewSession() {
         setPhase("completing");
         await stopBackgroundVideoRecording();
         await getHrQnaResults(getToken); // Trigger celery evaluation
-        alert("Your HR interview is complete! You will get your results shortly.");
-        navigate('/dashboard');
+        const wasSession = isSessionActive();
+        if (wasSession) {
+          alert("All 3 rounds (Coding, Technical, HR) completed successfully! You will get your results shortly.");
+        } else {
+          alert("Your HR interview is complete! You will get your results shortly.");
+        }
+        goNext(navigate, '/dashboard');
       } else {
         setQuestion(data.next_question);
         playQuestionAudio();
@@ -169,6 +194,8 @@ export default function HrInterviewSession() {
 
   const handleExit = async () => {
     await stopBackgroundVideoRecording();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    clearSession();
     navigate('/dashboard');
   };
 

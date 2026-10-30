@@ -33,17 +33,21 @@ def start_interview_view(request):
             return Response({"error": "Role is required"}, status=400)
 
         # Verify subscription entitlement first before starting/resuming tech interview
-        try:
-            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
-            if not is_entitled:
-                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+        if not settings.DEBUG:
+            try:
+                is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+                if not is_entitled:
                     return Response({"error": reason, "entitlement_exceeded": True}, status=403)
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         if not session_id:
             recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-            if not recent_session or recent_session.is_all_completed():
+            if (
+                not recent_session
+                or recent_session.is_all_completed()
+                or (settings.DEBUG and recent_session.tech_status in {"completed", "evaluating", "in_progress"})
+            ):
                 interview_session = Session.objects.create(
                     id=uuid.uuid4(),
                     user=request.user,
@@ -78,13 +82,13 @@ def start_interview_view(request):
             interview_session.save()
 
         # Subscription entitlement verification & consumption
-        try:
-            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
-            if not can_proceed:
-                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+        if not settings.DEBUG:
+            try:
+                can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
+                if not can_proceed:
                     return Response({"error": reason, "entitlement_exceeded": True}, status=403)
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         tech_round, _ = TechnicalRound.objects.get_or_create(session=interview_session)
         if not tech_round.started_at:

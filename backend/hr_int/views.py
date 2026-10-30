@@ -35,16 +35,20 @@ logger = logging.getLogger(__name__)
 def start_hr_interview(request):
     try:
         # Verify subscription entitlement first before starting/resuming hr interview
-        try:
-            is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
-            if not is_entitled:
-                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+        if not settings.DEBUG:
+            try:
+                is_entitled, reason, _ = SubscriptionService.check_session_entitlement(request.user)
+                if not is_entitled:
                     return Response({"error": reason, "entitlement_exceeded": True}, status=403)
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         recent_session = Session.objects.filter(user=request.user).order_by("-created_at").first()
-        if not recent_session or recent_session.is_all_completed():
+        if (
+            not recent_session
+            or recent_session.is_all_completed()
+            or (settings.DEBUG and recent_session.hr_status in {"completed", "in_progress"})
+        ):
             session_id = uuid.uuid4()
             interview_session = Session.objects.create(
                 id=session_id,
@@ -70,13 +74,13 @@ def start_hr_interview(request):
             session_id = interview_session.id
 
         # Subscription entitlement verification & consumption
-        try:
-            can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
-            if not can_proceed:
-                if not (settings.DEBUG and not SubscriptionPlan.objects.filter(is_active=True).exists()):
+        if not settings.DEBUG:
+            try:
+                can_proceed, reason = SubscriptionService.verify_and_consume_for_new_session(request.user, interview_session)
+                if not can_proceed:
                     return Response({"error": reason, "entitlement_exceeded": True}, status=403)
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         hr_round, created = HrRound.objects.get_or_create(session=interview_session)
         if created or not hr_round.started_at:

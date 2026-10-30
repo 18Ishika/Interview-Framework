@@ -1,3 +1,4 @@
+import { goNext, hasNextRound } from '../../utils/sessionFlow';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -74,6 +75,11 @@ export default function CodingRoundPage() {
 
       if (res.already_completed) {
         exitFullscreenSafely();
+        if (hasNextRound()) {
+          alert('Coding round already completed for this session. Proceeding to Technical Round...');
+          goNext(navigate, '/dashboard');
+          return;
+        }
         setWarningModal({
           type: 'already_completed',
           title: 'Round Already Completed',
@@ -218,6 +224,11 @@ export default function CodingRoundPage() {
       setFinalSummary(res);
       setPhase('completed');
       exitFullscreenSafely();
+      if (hasNextRound()) {
+        setTimeout(() => {
+          goNext(navigate, '/dashboard');
+        }, 1500);
+      }
     } catch (e) {
       console.error('Auto finish error:', e);
     }
@@ -375,6 +386,11 @@ export default function CodingRoundPage() {
       setFinalSummary(res);
       setPhase('completed');
       exitFullscreenSafely();
+      if (hasNextRound()) {
+        setTimeout(() => {
+          goNext(navigate, '/dashboard');
+        }, 1500);
+      }
     } catch (e) {
       alert('Error finalizing round: ' + e.message);
     } finally {
@@ -523,11 +539,11 @@ export default function CodingRoundPage() {
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => goNext(navigate, '/dashboard')}
               className="btn-start-coding"
               style={{ padding: '12px 28px' }}
             >
-              Return to Dashboard
+              {hasNextRound() ? 'Continue to Next Round' : 'Return to Dashboard'}
             </button>
             <button
               onClick={() => navigate('/interview/history')}

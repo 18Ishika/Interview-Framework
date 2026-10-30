@@ -1,3 +1,4 @@
+import { goNext, clearSession, hasNextRound } from "../../utils/sessionFlow";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
@@ -533,7 +534,7 @@ export default function InterviewSession() {
 
       // deferred so StrictMode's dev remount doesn't kick us out of fullscreen
       setTimeout(() => {
-        if (unmountedRef.current) leaveFullscreen();
+        if (unmountedRef.current && !hasNextRound()) leaveFullscreen();
       }, 0);
     };
   }, []); // eslint-disable-line
@@ -556,13 +557,20 @@ export default function InterviewSession() {
         await getResults(getToken);
 
         releaseMedia();
-        leaveFullscreen();
 
-        alert(
-          "Your interview is complete! You will get your results within 3-5 mins."
-        );
+        if (!hasNextRound()) {
 
-        navigate("/dashboard", { replace: true });
+          leaveFullscreen();
+
+        }
+
+        if (hasNextRound()) {
+          alert("Technical round complete! Proceeding to HR round...");
+        } else {
+          alert("Your interview is complete! You will get your results within 3-5 mins.");
+        }
+
+        goNext(navigate, "/dashboard");
       } else {
         setQuestion(data.next_question);
         playQuestionAudio();
@@ -597,7 +605,7 @@ export default function InterviewSession() {
     } finally {
       releaseMedia();
       leaveFullscreen();
-      navigate("/interview", { replace: true });
+      clearSession(); navigate("/interview", { replace: true });
     }
   };
 
