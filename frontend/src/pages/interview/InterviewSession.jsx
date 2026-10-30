@@ -1,74 +1,287 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-import { startInterview, evaluateAnswer, getResults, fetchQuestionAudio } from "../../api/interviewApi";
+
+import {
+  startInterview,
+  evaluateAnswer,
+  getResults,
+  fetchQuestionAudio,
+} from "../../api/interviewApi";
+
 import { useInterviewRecording } from "../../hooks/useInterviewRecording";
+import InterviewRoom from "../../components/interview-room/InterviewRoom";
+
+import "../../styles/virtual-interview.css";
 import "./InterviewSession.css";
 
-function QuestionPanel({ question, onSubmit, loading, audioUrl, onExit, startAnswerRecording, stopAnswerRecording }) {
+// Types text out one character at a time
+function useTypewriter(text, speed = 28) {
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    setN(0);
+    if (!text) return undefined;
+
+    const id = setInterval(() => {
+      setN((i) => {
+        if (i >= text.length) {
+          clearInterval(id);
+          return i;
+        }
+        return i + 1;
+      });
+    }, speed);
+
+    return () => clearInterval(id);
+  }, [text, speed]);
+
+  return {
+    typed: text ? text.slice(0, n) : "",
+    done: !!text && n >= text.length,
+  };
+}
+
+// Live speech-to-text (Web Speech API, Chrome/Edge)
+function useSpeechToText() {
+  const recRef = useRef(null);
+  const finalRef = useRef("");
+  const [transcript, setTranscript] = useState("");
+  const [interim, setInterim] = useState("");
+
+  const SR =
+    typeof window !== "undefined" &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const start = () => {
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = "en-IN";
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    finalRef.current = "";
+    setTranscript("");
+    setInterim("");
+
+    rec.onresult = (e) => {
+      let live = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalRef.current += t + " ";
+        else live += t;
+      }
+      setTranscript(finalRef.current);
+      setInterim(live);
+    };
+
+    // Chrome auto-stops after silence, restart while still recording
+    rec.onend = () => {
+      if (recRef.current === rec) {
+        try {
+          rec.start();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+
+    recRef.current = rec;
+    try {
+      rec.start();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const stop = () => {
+    const rec = recRef.current;
+    recRef.current = null;
+    try {
+      rec?.stop();
+    } catch {
+      /* ignore */
+    }
+    setInterim("");
+  };
+
+  const clear = () => {
+    finalRef.current = "";
+    setTranscript("");
+    setInterim("");
+  };
+
+  useEffect(() => () => stop(), []); // eslint-disable-line
+
+  return { transcript, interim, start, stop, clear, supported: !!SR };
+}
+
+// Goes fullscreen automatically: tries on load, falls back to the first click/key
+function useAutoFullscreen() {
+  useEffect(() => {
+    const enter = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+    };
+
+    const cleanup = () => {
+      window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("keydown", onGesture);
+    };
+
+    const onGesture = () => {
+      enter();
+      cleanup(); // one-shot, so it won't fight the Exit button
+    };
+
+    enter(); // works if the Start/Begin click was just before
+
+    window.addEventListener("pointerdown", onGesture);
+    window.addEventListener("keydown", onGesture);
+    return cleanup;
+  }, []);
+}
+
+function QuestionPanel({
+  question,
+  onSubmit,
+  loading,
+  onReplay,
+  onExit,
+  startAnswerRecording,
+  stopAnswerRecording,
+}) {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
 
-  const startRec = () => {
-    startAnswerRecording();
-    setRecording(true);
-    setAudioBlob(null);
-    setAudioURL(null);
+  const { typed, done } = useTypewriter(question.question);
+  const speech = useSpeechToText();
+
+  const startRec = async () => {
+    try {
+      await startAnswerRecording();
+      speech.start();
+
+      setRecording(true);
+      setAudioBlob(null);
+      setAudioURL(null);
+    } catch (error) {
+      console.error("Recording start failed:", error);
+    }
   };
 
   const stopRec = async () => {
-    const blob = await stopAnswerRecording();
-    if (blob) {
-      setAudioBlob(blob);
-      setAudioURL(URL.createObjectURL(blob));
+    speech.stop();
+
+    try {
+      const blob = await stopAnswerRecording();
+
+      if (blob) {
+        setAudioBlob(blob);
+        setAudioURL(URL.createObjectURL(blob));
+      }
+
+      setRecording(false);
+    } catch (error) {
+      console.error("Recording stop failed:", error);
+      setRecording(false);
     }
-    setRecording(false);
   };
-  
-  const pct = Math.round((question.question_number / question.total_questions) * 100);
+
+  const pct = Math.round(
+    (question.question_number / question.total_questions) * 100
+  );
 
   return (
-    <div className="is-panel">
-      <div className="is-progress-wrap">
-        <div className="is-progress-fill" style={{ width: `${pct}%` }} />
+    <section className="irs-panel" aria-live="polite">
+      <div className="irs-progress">
+        <div className="irs-progress__fill" style={{ width: `${pct}%` }} />
       </div>
-      <p className="is-progress-label">Question {question.question_number} of {question.total_questions}</p>
-      <div className="is-badge">{question.topic} · {question.concept}</div>
-      <div className="is-question-box">
-        <p className="is-question-text">{question.question}</p>
+
+      <div className="irs-meta">
+        <span>
+          Question {question.question_number} of {question.total_questions}
+        </span>
+
+        <span className="irs-badge">
+          {question.topic} · {question.concept}
+        </span>
       </div>
-      <div className="is-question-actions">
-        <button className="is-btn-ghost" onClick={() => audioUrl && new Audio(audioUrl).play()}>
-          🔊 Replay Question
-        </button>
-        <button className="is-btn-danger" onClick={onExit}>
-          ✕ Exit Interview
-        </button>
-      </div>
-      <div className="is-recorder">
-        {!audioBlob && !recording && (
-          <button className="is-btn-record" onClick={startRec}>🎙 Start Recording</button>
-        )}
-        {recording && (
-          <>
-            <div className="is-rec-indicator"><span className="is-dot" /> Recording…</div>
-            <button className="is-btn-stop" onClick={stopRec}>⏹ Stop</button>
-          </>
-        )}
-        {audioBlob && (
-          <div className="is-audio-review">
-            <audio controls src={audioURL} style={{ width: "100%" }} />
-            <div className="is-audio-actions">
-              <button className="is-btn-ghost" onClick={() => { setAudioBlob(null); setAudioURL(null); }}>Re-record</button>
-              <button className="is-btn-primary" style={{ opacity: loading ? 0.5 : 1 }} onClick={() => onSubmit(audioBlob)} disabled={loading}>
-                {loading ? "Evaluating…" : "Submit Answer →"}
+
+      <p className="irs-question">
+        {typed}
+        {!done && <span className="irs-cursor" />}
+      </p>
+
+      {(recording || speech.transcript) && (
+        <div className="irs-transcript">
+          <span className="irs-transcript__label">Your answer</span>
+          <p>
+            {speech.transcript}
+            <span className="irs-transcript__interim">{speech.interim}</span>
+          </p>
+        </div>
+      )}
+
+      <div className="irs-actions">
+        <div className="irs-actions__left">
+          <button className="irs-btn" onClick={onReplay}>
+            🔊 Replay
+          </button>
+
+          <button className="irs-btn irs-btn--danger" onClick={onExit}>
+            ✕ Exit
+          </button>
+        </div>
+
+        <div className="irs-actions__right">
+          {!audioBlob && !recording && (
+            <button className="irs-btn irs-btn--record" onClick={startRec}>
+              🎙 Start recording
+            </button>
+          )}
+
+          {recording && (
+            <>
+              <span className="irs-rec">
+                <i /> Recording…
+              </span>
+
+              <button className="irs-btn irs-btn--stop" onClick={stopRec}>
+                ⏹ Stop
               </button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+
+          {audioBlob && (
+            <>
+              <audio controls src={audioURL} className="irs-audio" />
+
+              <button
+                className="irs-btn"
+                onClick={() => {
+                  setAudioBlob(null);
+                  setAudioURL(null);
+                  speech.clear();
+                }}
+              >
+                Re-record
+              </button>
+
+              <button
+                className="irs-btn irs-btn--primary"
+                onClick={() => onSubmit(audioBlob)}
+                disabled={loading}
+              >
+                {loading ? "Evaluating…" : "Submit answer →"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -77,13 +290,36 @@ export default function InterviewSession() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [phase, setPhase] = useState(location.state?.role ? "loading" : "redirecting");
+  useAutoFullscreen();
+
+  const [phase, setPhase] = useState(
+    location.state?.role ? "loading" : "redirecting"
+  );
+
   const [question, setQuestion] = useState(null);
-  const [sessionId, setSessionId] = useState(location.state?.session_id || null);
+  const [sessionId, setSessionId] = useState(
+    location.state?.session_id || null
+  );
+
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
+
+  const [speaking, setSpeaking] = useState(false);
+  const [userSpeaking, setUserSpeaking] = useState(false);
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const videoRef = useRef(null);
+  const audioRef = useRef(null);
+
+  // Refs so cleanup / exit always see the latest values (no stale closures)
+  const streamRef = useRef(null);
+  const streamsRef = useRef(new Set()); // every stream we ever got
+  const unmountedRef = useRef(false);
+  const stopBgRef = useRef(null);
+  const stopAnswerRef = useRef(null);
+  const answeringRef = useRef(false);
+  const exitingRef = useRef(false);
 
   const {
     videoStream,
@@ -94,148 +330,341 @@ export default function InterviewSession() {
     startBackgroundVideoRecording,
     stopBackgroundVideoRecording,
     startAnswerRecording,
-    stopAnswerRecording
+    stopAnswerRecording,
   } = useInterviewRecording(sessionId, "tech", getToken);
 
+  // keep refs fresh
+  useEffect(() => {
+    streamRef.current = videoStream;
+    if (videoStream) streamsRef.current.add(videoStream);
+  }, [videoStream]);
+
+  useEffect(() => {
+    stopBgRef.current = stopBackgroundVideoRecording;
+    stopAnswerRef.current = stopAnswerRecording;
+  });
+
+  // Attach camera stream to preview
   useEffect(() => {
     if (videoStream && videoRef.current) {
       videoRef.current.srcObject = videoStream;
     }
   }, [videoStream]);
 
+  // ---------- media cleanup helpers ----------
+
+  // Never lets a hanging recorder block navigation
+  const safeStopBackground = async () => {
+    try {
+      await Promise.race([
+        Promise.resolve(stopBgRef.current?.()),
+        new Promise((resolve) => setTimeout(resolve, 8000)),
+      ]);
+    } catch (e) {
+      console.error("Background recording stop failed:", e);
+    }
+  };
+
+  const leaveFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  // Turns off camera + mic (every stream we ever opened)
+  const releaseMedia = () => {
+    const all = new Set(streamsRef.current);
+    if (streamRef.current) all.add(streamRef.current);
+    if (videoRef.current?.srcObject) all.add(videoRef.current.srcObject);
+
+    all.forEach((s) => s.getTracks().forEach((t) => t.stop()));
+
+    streamsRef.current.clear();
+    streamRef.current = null;
+
+    if (videoRef.current) videoRef.current.srcObject = null;
+
+    audioRef.current?.pause();
+  };
+
+  // ---------- interviewer audio ----------
+
+  const playAudio = (url) => {
+    audioRef.current?.pause();
+
+    const a = new Audio(url);
+    audioRef.current = a;
+
+    a.onplay = () => setSpeaking(true);
+    a.onended = () => setSpeaking(false);
+    a.onpause = () => setSpeaking(false);
+    a.onerror = () => setSpeaking(false);
+
+    a.play().catch(() => setSpeaking(false));
+  };
+
+  const stopAudio = () => {
+    audioRef.current?.pause();
+    setSpeaking(false);
+  };
+
   const playQuestionAudio = async () => {
     try {
       const url = await fetchQuestionAudio(getToken);
+
       setQuestionAudioUrl(url);
-      new Audio(url).play();
-    } catch (e) { console.error("Audio fetch failed", e); }
+      playAudio(url);
+    } catch (e) {
+      console.error("Audio fetch failed", e);
+    }
   };
 
+  const handleReplay = () => {
+    if (questionAudioUrl) {
+      playAudio(questionAudioUrl);
+    }
+  };
+
+  // ==========================================
+  // CANDIDATE MICROPHONE + AVATAR FOCUS CONTROL
+  // ==========================================
+
+  const startAnswer = async () => {
+    stopAudio();
+    setUserSpeaking(true);
+
+    try {
+      await startAnswerRecording();
+      answeringRef.current = true;
+    } catch (err) {
+      setUserSpeaking(false);
+      throw err;
+    }
+  };
+
+  const stopAnswer = async () => {
+    try {
+      return await stopAnswerRecording();
+    } finally {
+      answeringRef.current = false;
+      setUserSpeaking(false);
+    }
+  };
+
+  // ==========================================
+
   const handleStart = async (role) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+
     try {
       const stream = await initCamera();
-      if (!stream) {
-        throw new Error("Camera initialization failed. Please check permissions.");
+
+      if (stream) streamsRef.current.add(stream);
+
+      // user already left while the camera was starting: don't keep it on
+      if (unmountedRef.current || exitingRef.current) {
+        releaseMedia();
+        return;
       }
-      
-      const q = location.state?.initialQuestion || await startInterview(role, getToken);
+
+      if (!stream) {
+        throw new Error(
+          "Camera initialization failed. Please check permissions."
+        );
+      }
+
+      streamRef.current = stream;
+
+      const q =
+        location.state?.initialQuestion ||
+        (await startInterview(role, getToken));
+
       setQuestion(q);
       setPhase("question");
-      
+
       if (q.session_id) {
         setSessionId(q.session_id);
       }
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-    playQuestionAudio();
+
+      playQuestionAudio();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Start background video recording
   useEffect(() => {
-    // Only start background recording when we have both a stream and a session ID
-    if (sessionId && videoStream && !isRecording && !isFinishing) {
+    if (
+      sessionId &&
+      videoStream &&
+      !isRecording &&
+      !isFinishing &&
+      !exitingRef.current
+    ) {
       startBackgroundVideoRecording(videoStream);
     }
-  }, [sessionId, videoStream, isRecording, isFinishing, startBackgroundVideoRecording]);
+  }, [
+    sessionId,
+    videoStream,
+    isRecording,
+    isFinishing,
+    startBackgroundVideoRecording,
+  ]);
 
+  // Initialize interview
   useEffect(() => {
+    unmountedRef.current = false;
     const role = location.state?.role;
+
     if (role) {
       handleStart(role);
     } else {
-      navigate('/interview/setup', { replace: true });
+      navigate("/interview/setup", { replace: true });
     }
-    
+
+    // Unmount cleanup: always release camera/mic, even if user navigates away
     return () => {
-      // Cleanup hook handles stream stop, but we want to ensure stopBackgroundVideoRecording isn't missed on unmount
-      if (isRecording) {
-        stopBackgroundVideoRecording();
-      }
+      unmountedRef.current = true;
+      stopBgRef.current?.();
+      releaseMedia();
+
+      // deferred so StrictMode's dev remount doesn't kick us out of fullscreen
+      setTimeout(() => {
+        if (unmountedRef.current) leaveFullscreen();
+      }, 0);
     };
   }, []); // eslint-disable-line
 
+  // Submit answer and get next question
   const handleSubmit = async (audioBlob) => {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+
     try {
+      stopAudio();
+
       const data = await evaluateAnswer(audioBlob, getToken);
+
       if (data.next_question?.round_complete) {
+        exitingRef.current = true;
         setPhase("completing");
-        await stopBackgroundVideoRecording();
-        await getResults(getToken); // Trigger celery evaluation
-        alert("Your interview is complete! You will get your results within 3-5 mins.");
-        navigate('/dashboard');
+
+        await safeStopBackground();
+        await getResults(getToken);
+
+        releaseMedia();
+        leaveFullscreen();
+
+        alert(
+          "Your interview is complete! You will get your results within 3-5 mins."
+        );
+
+        navigate("/dashboard", { replace: true });
       } else {
         setQuestion(data.next_question);
         playQuestionAudio();
       }
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Exit interview: always navigates, always releases camera/mic
   const handleExit = async () => {
-    await stopBackgroundVideoRecording();
-    navigate('/interview');
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+
+    stopAudio();
+    setUserSpeaking(false);
+
+    try {
+      // stop an in-progress answer recording (mic) first
+      if (answeringRef.current) {
+        try {
+          await stopAnswerRef.current?.();
+        } catch (e) {
+          console.error("Answer recording stop failed:", e);
+        }
+        answeringRef.current = false;
+      }
+
+      await safeStopBackground();
+    } finally {
+      releaseMedia();
+      leaveFullscreen();
+      navigate("/interview", { replace: true });
+    }
   };
 
   return (
-    <div className="is-page">
-      {/* Background continuous video feed pinned to the top right using user requested styling */}
-      <div className="is-camera-feed" style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        width: '240px',
-        height: '180px',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-        zIndex: 1000,
-        backgroundColor: '#1E1E1E',
-        border: '2px solid var(--primary)' // Assuming there is a var(--primary) defined in the platform colors
-      }}>
+    <div className="irs-page">
+      {/* Full-screen 3D interview room */}
+      <div className="irs-room">
+        <InterviewRoom
+          motionEnabled
+          speaking={speaking}
+          candidateSpeaking={userSpeaking}
+        />
+      </div>
+
+      {/* Live camera preview */}
+      <div className="irs-camera">
         {videoStream ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-          />
+          <video ref={videoRef} autoPlay muted playsInline />
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#888' }}>
-            Camera Off
-          </div>
+          <div className="irs-camera__off">Camera Off</div>
+        )}
+
+        {isRecording && (
+          <span className="irs-camera__rec">
+            <i /> REC
+          </span>
         )}
       </div>
 
+      {/* Error messages */}
       {(error || videoError) && (
-        <div className="is-error-banner">
+        <div className="irs-error">
           ⚠️ {error || videoError}
-          <button onClick={() => { setError(null); }} className="is-error-close">✕</button>
+          <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
+
+      {/* Loading */}
       {(phase === "loading" || phase === "redirecting") && (
-        <div className="is-centered">
-          <h2 className="is-heading">Starting your interview…</h2>
-          <p className="is-sub">Setting things up and accessing your camera.</p>
+        <div className="irs-center">
+          <h2>Starting your interview…</h2>
+          <p>Setting things up and accessing your camera.</p>
         </div>
       )}
+
+      {/* Completing */}
       {phase === "completing" && (
-        <div className="is-centered">
-          <h2 className="is-heading">Finishing up…</h2>
-          <p className="is-sub">Saving your background video and wrapping up your session. Please do not close this window.</p>
+        <div className="irs-center">
+          <h2>Finishing up…</h2>
+          <p>
+            Saving your video and wrapping up your session. Please do not close
+            this window.
+          </p>
         </div>
       )}
+
+      {/* Question panel */}
       {phase === "question" && question && (
         <QuestionPanel
           key={question.question_number}
           question={question}
           onSubmit={handleSubmit}
           loading={loading || isFinishing}
-          audioUrl={questionAudioUrl}
+          onReplay={handleReplay}
           onExit={handleExit}
-          startAnswerRecording={startAnswerRecording}
-          stopAnswerRecording={stopAnswerRecording}
+          startAnswerRecording={startAnswer}
+          stopAnswerRecording={stopAnswer}
         />
       )}
     </div>

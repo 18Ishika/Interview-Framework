@@ -22,7 +22,7 @@ import Dashboard from './pages/Dashboard';
 import IQCardPage from './pages/profile/IQCardPage';
 import CodingRoundPage from './pages/coding/CodingRoundPage';
 import PricingPage from './pages/PricingPage';
-
+import VirtualInterview from './pages/VirtualInterview'
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
@@ -109,6 +109,7 @@ function App() {
             <Route path="/interview/history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
             <Route path="/interview" element={<ProtectedRoute><InterviewSetup /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/virtual-interview" element={<VirtualInterview />} />
           </Route>
         </Routes>
       </BrowserRouter>

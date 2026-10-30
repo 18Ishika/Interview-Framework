@@ -110,7 +110,7 @@ function CheckRow({ icon, label, statusText, state, extra, last }) {
   );
 }
 
-function CheckScreen({ onBegin, loading }) {
+function CheckScreen({ onBegin, loading, releaseRef }) {
   const [camState, setCamState] = useState('idle');
   const [micState, setMicState] = useState('idle');
   const [camMsg, setCamMsg] = useState('Not checked yet');
@@ -122,17 +122,56 @@ function CheckScreen({ onBegin, loading }) {
   const streamRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
+  const unmountedRef = useRef(false);
+
+  // Stops camera + mic tracks and closes the audio context
+  const releaseDevices = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+
+    if (videoRef.current) videoRef.current.srcObject = null;
+
+    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
+    analyserRef.current = null;
+  }, []);
+
+  // Let the parent release devices right before navigating
+  useEffect(() => {
+    if (releaseRef) releaseRef.current = releaseDevices;
+  }, [releaseRef, releaseDevices]);
+
+  // Always release on unmount
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+      releaseDevices();
+    };
+  }, [releaseDevices]);
 
   const runChecks = useCallback(async () => {
     setFailed(false);
     setCamState('loading'); setCamMsg('Requesting access…');
     setMicState('loading'); setMicMsg('Requesting access…');
+
+    // clear any previous stream before requesting a new one (Retry)
+    releaseDevices();
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+      // user left the page while the permission prompt was open
+      if (unmountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       setCamState('pass'); setCamMsg('Camera detected');
       setMicState('pass'); setMicMsg('Microphone active');
+
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -145,7 +184,7 @@ function CheckScreen({ onBegin, loading }) {
       setMicState('fail'); setMicMsg('Permission denied or device not found');
       setFailed(true);
     }
-  }, []);
+  }, [releaseDevices]);
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: '32px 24px' }}>
@@ -243,8 +282,18 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
   const [starting, setStarting] = useState(false);
   const [warningModal, setWarningModal] = useState(null);
 
+  // CheckScreen registers its release function here
+  const releaseRef = useRef(null);
+
   const handleBegin = async () => {
     if (starting) return;
+
+    // Runs synchronously inside the click, so the browser still allows it.
+    // Backup in case fullscreen was dropped after the setup page.
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+
     setStarting(true);
     setWarningModal(null);
 
@@ -278,6 +327,9 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
         });
         return;
       }
+
+      // Free the preview camera/mic so the session page gets a clean stream
+      releaseRef.current?.();
 
       if (onBeginRealInterview) {
         onBeginRealInterview(q);
@@ -333,7 +385,7 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
 
       <div style={{ background: 'var(--color-bg-primary)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 600, overflow: 'hidden' }}>
         {screen === 'check' && (
-          <CheckScreen onBegin={handleBegin} loading={starting} />
+          <CheckScreen onBegin={handleBegin} loading={starting} releaseRef={releaseRef} />
         )}
         {screen === 'success' && (
           <SuccessScreen

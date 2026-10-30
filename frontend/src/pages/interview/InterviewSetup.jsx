@@ -54,11 +54,21 @@ export default function InterviewSetup() {
 
   function handleStart() {
     if (!canContinue) return;
+
     if (selectedType === 'coding') {
       navigate('/coding-round');
       return;
     }
-    navigate('/interview/preflight', { state: { type: selectedType, role: selectedRole, jd } });
+
+    // Must run inside the click handler (user gesture) or the browser blocks it.
+    // Fullscreen persists across react-router navigation (same document).
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+
+    navigate('/interview/preflight', {
+      state: { type: selectedType, role: selectedRole, jd },
+    });
   }
 
   return (

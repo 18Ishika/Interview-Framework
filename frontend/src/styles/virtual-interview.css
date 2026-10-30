@@ -1,0 +1,190 @@
+/* =====================================================
+   Live virtual-interview screen (full-screen 3D room)
+   ===================================================== */
+
+.irs-page {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-secondary);
+  overflow: hidden;
+}
+
+/* 3D room fills the whole screen */
+.irs-room { position: absolute; inset: 0; }
+.irs-room > .ivq-room { width: 100%; height: 100%; }
+
+/* override virtual-interview.css so the room is edge to edge */
+.irs-room .ivq-room {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+.irs-room .ivq-room canvas { width: 100% !important; height: 100% !important; }
+.irs-room .ivq-room__camera-status { left: 20px; top: 20px; bottom: auto; }
+
+/* live camera, top-right */
+.irs-camera {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 230px;
+  height: 172px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #1e1e1e;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+.irs-camera video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.irs-camera__off { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 14px; }
+.irs-camera__rec {
+  position: absolute; top: 8px; left: 8px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 99px;
+  background: rgba(0, 0, 0, 0.55); color: #fff;
+  font-size: 11px; font-weight: 600;
+}
+.irs-camera__rec i,
+.irs-rec i { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: irs-pulse 1.2s infinite; }
+.irs-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(860px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "progress"
+    "meta"
+    "question"
+    "actions";
+  row-gap: 8px;
+  padding: 0 22px 16px;
+  overflow: hidden;
+  background: rgba(253, 250, 241, 0.94);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+.irs-progress {
+  grid-area: progress;
+  height: 3px;
+  margin: 0 -20px 10px;
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+}
+.irs-progress__fill { height: 100%; background: var(--color-primary-dark); transition: width 0.3s; }
+
+.irs-meta {
+  grid-area: meta;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.irs-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.irs-question {
+  grid-area: question;
+  margin: 0;
+  min-height: 0;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+.irs-cursor { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: text-bottom; background: var(--color-text-primary); animation: irs-blink 0.9s steps(1) infinite; }
+.irs-actions {
+  grid-area: actions;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.irs-actions__left,
+.irs-actions__right { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.irs-audio { height: 34px; max-width: 200px; }
+.irs-rec { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; }
+
+/* buttons */
+.irs-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+.irs-btn:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-text-primary); }
+.irs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.irs-btn--primary { background: var(--color-primary-dark); color: #fff; border-color: transparent; padding: 10px 22px; }
+.irs-btn--primary:hover:not(:disabled) { color: #fff; filter: brightness(1.08); }
+.irs-btn--record { background: var(--color-primary-dark); color: #fff; border-color: transparent; padding: 10px 22px; }
+.irs-btn--record:hover:not(:disabled) { color: #fff; filter: brightness(1.08); }
+.irs-btn--stop { background: #ef4444; color: #fff; border-color: transparent; }
+.irs-btn--stop:hover:not(:disabled) { color: #fff; filter: brightness(1.08); }
+.irs-btn--danger { color: var(--color-danger); border-color: var(--color-danger); }
+.irs-btn--danger:hover:not(:disabled) { background: #fef2f2; color: var(--color-danger); border-color: var(--color-danger); }
+
+/* loading / finishing overlay */
+.irs-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 15;
+}
+.irs-center h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--color-text-primary); }
+.irs-center p { margin: 0; font-size: 14px; color: var(--color-text-secondary); }
+
+/* error banner */
+.irs-error {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  max-width: min(520px, calc(100% - 300px));
+  padding: 12px 16px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  z-index: 30;
+}
+.irs-error button { background: none; border: 0; color: #dc2626; font-size: 16px; cursor: pointer; }
+
+@keyframes irs-pulse { 50% { opacity: 0.35; } }
+@keyframes irs-blink { 50% { opacity: 0; } }
+
+@media (max-width: 720px) {
+  .irs-camera { width: 130px; height: 98px; top: 12px; right: 12px; }
+  .irs-panel {
+    grid-template-columns: 1fr;
+    grid-template-areas: "progress" "meta" "question" "actions";
+    row-gap: 8px;
+    bottom: 10px;
+  }
+  .irs-actions { justify-content: flex-start; }
+  .irs-question { font-size: 15px; }
+  .irs-error { max-width: calc(100% - 170px); }
+  .irs-room .ivq-room { aspect-ratio: auto; border-radius: 0; }
+}

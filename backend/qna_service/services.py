@@ -1,8 +1,12 @@
+import asyncio
 import json
-import random
 import os
-import io
-from gtts import gTTS
+import random
+
+import edge_tts
+
+# male options: en-IN-PrabhatNeural (Indian), en-US-GuyNeural, en-GB-RyanNeural
+VOICE =  "en-GB-RyanNeural"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -16,12 +20,22 @@ with open(HR_JSON_PATH, 'r', encoding="utf-8") as f:
     HR_QUESTION_DATA = json.load(f)
 
 
+async def _synthesize(text: str) -> bytes:
+    communicate = edge_tts.Communicate(text, VOICE, rate="-5%")
+    audio = bytearray()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio.extend(chunk["data"])
+    return bytes(audio)
+
+
 def get_role_data(role_name: str, round_type: str = 'tech') -> dict:
     data = HR_QUESTION_DATA if round_type == 'hr' else TECH_QUESTION_DATA
     for role in data.get('Roles', []):
         if role['Role'] == role_name:
             return role
     return None
+
 
 def pick_questions(role_name: str, round_type: str = 'tech') -> list:
     role = get_role_data(role_name, round_type)
@@ -41,7 +55,7 @@ def pick_questions(role_name: str, round_type: str = 'tech') -> list:
                 'concept': concept['Concept']
             })
     else:
-        # HR: one question per concept (unchanged)
+        # HR: one question per concept
         for topic in role['Topics']:
             for concept in topic['Concepts']:
                 question = random.choice(concept['Questions'])
@@ -52,6 +66,7 @@ def pick_questions(role_name: str, round_type: str = 'tech') -> list:
                 })
 
     return selected_questions
+
 
 def generate_questions(request, role_name: str, round_type: str):
     questions = pick_questions(role_name, round_type)
@@ -97,11 +112,4 @@ def generate_question_audio(request, round_type: str):
     if not questions or index >= len(questions):
         return None
 
-    question_text = questions[index]['question']
-    tts = gTTS(text=question_text, lang='en', slow=False)
-
-    audio_buffer = io.BytesIO()
-    tts.write_to_fp(audio_buffer)
-    audio_buffer.seek(0)
-
-    return audio_buffer.read()
+    return asyncio.run(_synthesize(questions[index]['question']))
