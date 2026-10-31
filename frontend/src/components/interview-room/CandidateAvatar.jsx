@@ -3,7 +3,7 @@ import GlbAvatar from './GlbAvatar'
 import { SEATS } from './layout'
 
 // Candidate sits on the LEFT, facing the interviewer. `speaking` moves the jaw.
-export default function CandidateAvatar({ url = '/avatars/candidate.glb', speaking = false, children }) {
+export default function CandidateAvatar({ speaking = false, url, children }) {
   const { position, rotationY } = SEATS.candidate
   return (
     <group name="candidate-slot" position={position} rotation={[0, rotationY, 0]}>

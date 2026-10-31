@@ -29,7 +29,8 @@ class SceneBoundary extends Component {
 function Ready({ onReady }) {
   useEffect(() => {
     onReady()
-  }, [onReady])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return null
 }
 
@@ -37,7 +38,9 @@ export default function InterviewRoom({
   motionEnabled = true,
   speaking = false, // interviewer is talking
   candidateSpeaking = false, // user is recording an answer
+  onReady, // called once when models are loaded
   className = '',
+  candidateAvatarUrl,
 }) {
   const [ready, setReady] = useState(false)
 
@@ -58,8 +61,17 @@ export default function InterviewRoom({
           <color attach="background" args={['#070a10']} />
           <fog attach="fog" args={['#070a10', 10, 26]} />
           <Suspense fallback={null}>
-            <RoomEnvironment speaking={speaking} candidateSpeaking={candidateSpeaking} />
-            <Ready onReady={() => setReady(true)} />
+            <RoomEnvironment
+                speaking={speaking}
+                candidateSpeaking={candidateSpeaking}
+                candidateAvatarUrl={candidateAvatarUrl}
+              />
+            <Ready
+              onReady={() => {
+                setReady(true)
+                onReady?.()
+              }}
+            />
           </Suspense>
           <RoomCamera enabled={motionEnabled} focus={focus} focusAmount={0.5} />
         </Canvas>

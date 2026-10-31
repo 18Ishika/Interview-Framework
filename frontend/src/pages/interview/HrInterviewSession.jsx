@@ -5,8 +5,10 @@ import { useAuth } from "@clerk/clerk-react";
 import { startHrInterview, evaluateHrAnswer, getHrQnaResults, fetchHrQuestionAudio } from "../../api/interviewApi";
 import { useInterviewRecording } from "../../hooks/useInterviewRecording";
 import InterviewRoom from "../../components/interview-room/InterviewRoom";
+import WelcomeIntro from "../../components/interview-room/WelcomeIntro";
 import "../../styles/virtual-interview.css";
 import "./InterviewSession.css";
+import { useCandidateAvatar } from "../../utils/candidateAvatar";
 
 function stopWithTimeout(stop, message) {
   return new Promise((resolve, reject) => {
@@ -26,10 +28,39 @@ function stopWithTimeout(stop, message) {
   });
 }
 
-function QuestionPanel({ question, onSubmit, loading, audioUrl, onReplay, onExit, startAnswerRecording, stopAnswerRecording }) {
+// Types text out one character at a time, only once `enabled` is true
+function useTypewriter(text, speed = 55, enabled = true) {
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    setN(0);
+    if (!text || !enabled) return undefined;
+
+    const id = setInterval(() => {
+      setN((i) => {
+        if (i >= text.length) {
+          clearInterval(id);
+          return i;
+        }
+        return i + 1;
+      });
+    }, speed);
+
+    return () => clearInterval(id);
+  }, [text, speed, enabled]);
+
+  return {
+    typed: text ? text.slice(0, n) : "",
+    done: !!text && enabled && n >= text.length,
+  };
+}
+
+function QuestionPanel({ question, textGo, onSubmit, loading, audioUrl, onReplay, onExit, startAnswerRecording, stopAnswerRecording }) {
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
+
+  const { typed, done } = useTypewriter(question.question, 55, textGo);
 
   const startRec = async () => {
     try {
@@ -55,7 +86,7 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onReplay, onExit
       setRecording(false);
     }
   };
-  
+
   const pct = Math.round((question.question_number / question.total_questions) * 100);
 
   return (
@@ -67,7 +98,16 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onReplay, onExit
         <span>Question {question.question_number} of {question.total_questions}</span>
         <span className="irs-badge">{question.topic} · {question.concept}</span>
       </div>
-      <p className="irs-question">{question.question}</p>
+      <p className="irs-question">
+        {textGo ? (
+          <>
+            {typed}
+            {!done && <span className="irs-cursor" />}
+          </>
+        ) : (
+          <span className="irs-cursor" />
+        )}
+      </p>
       <div className="irs-actions">
         <div className="irs-actions__left">
           <button className="irs-btn" onClick={onReplay} disabled={!audioUrl}>🔊 Replay</button>
@@ -98,7 +138,6 @@ function QuestionPanel({ question, onSubmit, loading, audioUrl, onReplay, onExit
   );
 }
 
-
 function useAutoFullscreen() {
   useEffect(() => {
     const enter = () => {
@@ -119,10 +158,11 @@ function useAutoFullscreen() {
 export default function HrInterviewSession() {
   useAutoFullscreen();
   const { getToken } = useAuth();
+  const candidateAvatarUrl = useCandidateAvatar();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [phase, setPhase] = useState(location.state?.role ? "loading" : "loading");
+  const [phase, setPhase] = useState("loading");
   const [question, setQuestion] = useState(null);
   const [sessionId, setSessionId] = useState(location.state?.sessionId || null);
   const [questionAudioUrl, setQuestionAudioUrl] = useState(null);
@@ -130,6 +170,9 @@ export default function HrInterviewSession() {
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
+  const [textGo, setTextGo] = useState(false); // true once the interviewer's voice starts
+  const firstAudioRef = useRef(false);
   const videoRef = useRef(null);
   const audioRef = useRef(null);
   const exitingRef = useRef(false);
@@ -156,11 +199,20 @@ export default function HrInterviewSession() {
     audioRef.current?.pause();
     const audio = new Audio(url);
     audioRef.current = audio;
-    audio.onplay = () => setSpeaking(true);
+    audio.onplay = () => {
+      setSpeaking(true);
+      setTextGo(true);
+    };
     audio.onended = () => setSpeaking(false);
     audio.onpause = () => setSpeaking(false);
-    audio.onerror = () => setSpeaking(false);
-    audio.play().catch(() => setSpeaking(false));
+    audio.onerror = () => {
+      setSpeaking(false);
+      setTextGo(true);
+    };
+    audio.play().catch(() => {
+      setSpeaking(false);
+      setTextGo(true);
+    });
   };
 
   const playQuestionAudio = async () => {
@@ -168,7 +220,10 @@ export default function HrInterviewSession() {
       const url = await fetchHrQuestionAudio(getToken);
       setQuestionAudioUrl(url);
       playAudio(url);
-    } catch (e) { console.error("Audio fetch failed", e); }
+    } catch (e) {
+      console.error("Audio fetch failed", e);
+      setTextGo(true);
+    }
   };
 
   const handleReplay = () => {
@@ -197,17 +252,16 @@ export default function HrInterviewSession() {
       if (!stream) {
         throw new Error("Camera initialization failed. Please check permissions.");
       }
-      
+
       const q = location.state?.initialQuestion || await startHrInterview(getToken);
       setQuestion(q);
       setPhase("question");
-      
+
       if (q.session_id) {
         setSessionId(q.session_id);
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-    playQuestionAudio();
   };
 
   useEffect(() => {
@@ -218,18 +272,24 @@ export default function HrInterviewSession() {
   }, [sessionId, videoStream, isRecording, isFinishing, startBackgroundVideoRecording]);
 
   useEffect(() => {
-    // Interview setup intentionally initializes state from this mount effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     handleStart();
-    
+
     return () => {
-      // Cleanup hook handles stream stop, but we want to ensure stopBackgroundVideoRecording isn't missed on unmount
       audioRef.current?.pause();
       if (isRecording) {
         stopBackgroundVideoRecording();
       }
     };
   }, []); // eslint-disable-line
+
+  // first question's audio starts only after Alan's welcome is gone
+  useEffect(() => {
+    if (introDone && phase === "question" && question && !firstAudioRef.current) {
+      firstAudioRef.current = true;
+      playQuestionAudio();
+    }
+  }, [introDone, phase, question]); // eslint-disable-line
 
   const handleSubmit = async (audioBlob) => {
     setLoading(true); setError(null);
@@ -247,6 +307,7 @@ export default function HrInterviewSession() {
         }
         goNext(navigate, '/dashboard');
       } else {
+        setTextGo(false);
         setQuestion(data.next_question);
         playQuestionAudio();
       }
@@ -290,8 +351,13 @@ export default function HrInterviewSession() {
   return (
     <div className="irs-page">
       <div className="irs-room">
-        <InterviewRoom motionEnabled speaking={speaking} candidateSpeaking={userSpeaking} />
-      </div>
+        <InterviewRoom
+          motionEnabled
+          speaking={speaking}
+          candidateSpeaking={userSpeaking}
+          candidateAvatarUrl={candidateAvatarUrl}
+        />
+        </div>
 
       <div className="irs-camera">
         {videoStream ? (
@@ -320,10 +386,11 @@ export default function HrInterviewSession() {
           <p>Saving your background video and wrapping up your session. Please do not close this window.</p>
         </div>
       )}
-      {phase === "question" && question && (
+      {phase === "question" && question && introDone && (
         <QuestionPanel
           key={question.question_number}
           question={question}
+          textGo={textGo}
           onSubmit={handleSubmit}
           loading={loading || isFinishing}
           audioUrl={questionAudioUrl}
@@ -331,6 +398,13 @@ export default function HrInterviewSession() {
           onExit={handleExit}
           startAnswerRecording={startAnswer}
           stopAnswerRecording={stopAnswer}
+        />
+      )}
+
+      {!introDone && (
+        <WelcomeIntro
+          waitFor={phase === "question" || !!error}
+          onDone={() => setIntroDone(true)}
         />
       )}
     </div>

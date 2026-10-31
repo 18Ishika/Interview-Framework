@@ -281,9 +281,21 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
   const [screen, setScreen] = useState('check');
   const [starting, setStarting] = useState(false);
   const [warningModal, setWarningModal] = useState(null);
+  
 
   // CheckScreen registers its release function here
   const releaseRef = useRef(null);
+
+  // runs after the welcome screen finishes
+  const enterRoom = ({ q, interviewType }) => {
+    if (onBeginRealInterview) {
+      onBeginRealInterview(q);
+    } else if (interviewType === 'hr') {
+      navigate('/interview/hr', { state: { ...location.state, initialQuestion: q, sessionId: q.session_id } });
+    } else {
+      navigate('/interview/session', { state: { ...location.state, initialQuestion: q, session_id: q.session_id } });
+    }
+  };
 
   const handleBegin = async () => {
     if (starting) return;
@@ -331,14 +343,12 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
       // Free the preview camera/mic so the session page gets a clean stream
       releaseRef.current?.();
 
-      if (onBeginRealInterview) {
+           if (onBeginRealInterview) {
         onBeginRealInterview(q);
+      } else if (interviewType === 'hr') {
+        navigate('/interview/hr', { state: { ...location.state, initialQuestion: q, sessionId: q.session_id } });
       } else {
-        if (interviewType === 'hr') {
-          navigate('/interview/hr', { state: { ...location.state, initialQuestion: q, sessionId: q.session_id } });
-        } else {
-          navigate('/interview/session', { state: { ...location.state, initialQuestion: q, session_id: q.session_id } });
-        }
+        navigate('/interview/session', { state: { ...location.state, initialQuestion: q, session_id: q.session_id } });
       }
     } catch (err) {
       console.error('Failed to start interview:', err);
@@ -524,6 +534,8 @@ export default function InterviewPreflight({ onBeginRealInterview }) {
           </div>
         </div>
       )}
+
+      {/* Alan Turing welcome, covers the whole screen, then we enter the room */}
     </section>
   );
 }

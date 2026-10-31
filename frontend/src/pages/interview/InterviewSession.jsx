@@ -2,7 +2,7 @@ import { goNext, clearSession, hasNextRound } from "../../utils/sessionFlow";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
-
+import { useCandidateAvatar } from "../../utils/candidateAvatar";
 import {
   startInterview,
   evaluateAnswer,
@@ -12,17 +12,18 @@ import {
 
 import { useInterviewRecording } from "../../hooks/useInterviewRecording";
 import InterviewRoom from "../../components/interview-room/InterviewRoom";
+import WelcomeIntro from "../../components/interview-room/WelcomeIntro";
 
 import "../../styles/virtual-interview.css";
 import "./InterviewSession.css";
 
-// Types text out one character at a time
-function useTypewriter(text, speed = 28) {
+// Types text out one character at a time, only once `enabled` is true
+function useTypewriter(text, speed = 55, enabled = true) {
   const [n, setN] = useState(0);
 
   useEffect(() => {
     setN(0);
-    if (!text) return undefined;
+    if (!text || !enabled) return undefined;
 
     const id = setInterval(() => {
       setN((i) => {
@@ -35,11 +36,11 @@ function useTypewriter(text, speed = 28) {
     }, speed);
 
     return () => clearInterval(id);
-  }, [text, speed]);
+  }, [text, speed, enabled]);
 
   return {
     typed: text ? text.slice(0, n) : "",
-    done: !!text && n >= text.length,
+    done: !!text && enabled && n >= text.length,
   };
 }
 
@@ -146,6 +147,7 @@ function useAutoFullscreen() {
 
 function QuestionPanel({
   question,
+  textGo,
   onSubmit,
   loading,
   onReplay,
@@ -157,7 +159,7 @@ function QuestionPanel({
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioURL, setAudioURL] = useState(null);
 
-  const { typed, done } = useTypewriter(question.question);
+  const { typed, done } = useTypewriter(question.question, 55, textGo);
   const speech = useSpeechToText();
 
   const startRec = async () => {
@@ -212,8 +214,14 @@ function QuestionPanel({
       </div>
 
       <p className="irs-question">
-        {typed}
-        {!done && <span className="irs-cursor" />}
+        {textGo ? (
+          <>
+            {typed}
+            {!done && <span className="irs-cursor" />}
+          </>
+        ) : (
+          <span className="irs-cursor" />
+        )}
       </p>
 
       {(recording || speech.transcript) && (
@@ -288,6 +296,7 @@ function QuestionPanel({
 
 export default function InterviewSession() {
   const { getToken } = useAuth();
+  const candidateAvatarUrl = useCandidateAvatar();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -309,6 +318,9 @@ export default function InterviewSession() {
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [introDone, setIntroDone] = useState(false);
+  const [textGo, setTextGo] = useState(false); // true once the interviewer's voice starts
+  const firstAudioRef = useRef(false);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
@@ -396,12 +408,22 @@ export default function InterviewSession() {
     const a = new Audio(url);
     audioRef.current = a;
 
-    a.onplay = () => setSpeaking(true);
+    // text starts typing the moment the voice starts
+    a.onplay = () => {
+      setSpeaking(true);
+      setTextGo(true);
+    };
     a.onended = () => setSpeaking(false);
     a.onpause = () => setSpeaking(false);
-    a.onerror = () => setSpeaking(false);
+    a.onerror = () => {
+      setSpeaking(false);
+      setTextGo(true);
+    };
 
-    a.play().catch(() => setSpeaking(false));
+    a.play().catch(() => {
+      setSpeaking(false);
+      setTextGo(true);
+    });
   };
 
   const stopAudio = () => {
@@ -417,6 +439,7 @@ export default function InterviewSession() {
       playAudio(url);
     } catch (e) {
       console.error("Audio fetch failed", e);
+      setTextGo(true); // show the text even if audio fails
     }
   };
 
@@ -487,8 +510,7 @@ export default function InterviewSession() {
       if (q.session_id) {
         setSessionId(q.session_id);
       }
-
-      playQuestionAudio();
+      // first audio is started by the effect below, after the intro
     } catch (e) {
       setError(e.message);
     } finally {
@@ -539,6 +561,14 @@ export default function InterviewSession() {
     };
   }, []); // eslint-disable-line
 
+  // first question's audio starts only after Alan's welcome is gone
+  useEffect(() => {
+    if (introDone && phase === "question" && question && !firstAudioRef.current) {
+      firstAudioRef.current = true;
+      playQuestionAudio();
+    }
+  }, [introDone, phase, question]); // eslint-disable-line
+
   // Submit answer and get next question
   const handleSubmit = async (audioBlob) => {
     setLoading(true);
@@ -559,9 +589,7 @@ export default function InterviewSession() {
         releaseMedia();
 
         if (!hasNextRound()) {
-
           leaveFullscreen();
-
         }
 
         if (hasNextRound()) {
@@ -572,6 +600,7 @@ export default function InterviewSession() {
 
         goNext(navigate, "/dashboard");
       } else {
+        setTextGo(false); // hold the text until the next voice starts
         setQuestion(data.next_question);
         playQuestionAudio();
       }
@@ -605,7 +634,8 @@ export default function InterviewSession() {
     } finally {
       releaseMedia();
       leaveFullscreen();
-      clearSession(); navigate("/interview", { replace: true });
+      clearSession();
+      navigate("/interview", { replace: true });
     }
   };
 
@@ -614,10 +644,11 @@ export default function InterviewSession() {
       {/* Full-screen 3D interview room */}
       <div className="irs-room">
         <InterviewRoom
-          motionEnabled
-          speaking={speaking}
-          candidateSpeaking={userSpeaking}
-        />
+        motionEnabled
+        speaking={speaking}
+        candidateSpeaking={userSpeaking}
+        candidateAvatarUrl={candidateAvatarUrl}
+      />
       </div>
 
       {/* Live camera preview */}
@@ -663,16 +694,25 @@ export default function InterviewSession() {
       )}
 
       {/* Question panel */}
-      {phase === "question" && question && (
+      {phase === "question" && question && introDone && (
         <QuestionPanel
           key={question.question_number}
           question={question}
+          textGo={textGo}
           onSubmit={handleSubmit}
           loading={loading || isFinishing}
           onReplay={handleReplay}
           onExit={handleExit}
           startAnswerRecording={startAnswer}
           stopAnswerRecording={stopAnswer}
+        />
+      )}
+
+      {/* Alan Turing welcome: covers everything until the greeting is done and the session is ready */}
+      {!introDone && (
+        <WelcomeIntro
+          waitFor={phase === "question" || !!error}
+          onDone={() => setIntroDone(true)}
         />
       )}
     </div>

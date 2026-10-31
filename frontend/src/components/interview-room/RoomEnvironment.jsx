@@ -127,7 +127,11 @@ function Plant({ position , scale=1}) {
   )
 }
 
-export default function RoomEnvironment({ speaking = false, candidateSpeaking = false }) {
+export default function RoomEnvironment({
+  speaking = false,
+  candidateSpeaking = false,
+  candidateAvatarUrl,
+}) {
   const spot = useRef()
   const wallLight = useRef()
   const target = useMemo(() => new THREE.Object3D(), [])
@@ -217,7 +221,7 @@ export default function RoomEnvironment({ speaking = false, candidateSpeaking = 
       <Plant position={[2.3, 0, backZ + 0.7]} scale={0.8} />
       {/* ---------- furniture + avatar slots ---------- */}
       <Desk />
-            <CandidateAvatar speaking={candidateSpeaking} />
+          <CandidateAvatar speaking={candidateSpeaking} url={candidateAvatarUrl} />
       <InterviewerAvatar speaking={speaking} />
     </>
   )

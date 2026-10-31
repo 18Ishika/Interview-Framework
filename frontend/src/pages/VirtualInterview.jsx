@@ -26,7 +26,10 @@ export default function VirtualInterview({ onExit }) {
     return () => clearInterval(id)
   }, [status])
 
-  const handleExit = () => (onExit ? onExit() : window.history.back())
+  const handleExit = () => {
+    window.speechSynthesis?.cancel()
+    onExit ? onExit() : window.history.back()
+  }
 
   return (
     <div className="ivq-page">

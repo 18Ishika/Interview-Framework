@@ -604,4 +604,3 @@ export default function GlbAvatar({
 
 // start downloading both models as soon as this file loads
 useGLTF.preload('/avatars/interviewer.glb')
-useGLTF.preload('/avatars/candidate.glb')
