@@ -117,47 +117,94 @@ def _build_overall_summary(results: list) -> str:
     )
 
 
-EXEC_SUMMARY_PROMPT = """You are writing a short executive summary for a
-candidate's interview report, combining results from up to three rounds:
-Technical, HR/Behavioral, and Coding.
+EXEC_SUMMARY_PROMPT = """You are writing the closing section of a candidate's
+interview report.
 
-Write 2-4 sentences that read like a hiring-panel summary: overall
-impression, one or two standout strengths, and one growth area if the data
-supports it. Be specific but do not just restate the numeric scores.
+IMPORTANT: Use ONLY the rounds present in the data below. Do not mention,
+assume, or praise any round that is not in the data.
+
+Write:
+- "overall_summary": 2-4 sentences, hiring-panel tone. Do not just restate scores.
+- "strengths": 2-4 specific things the candidate did well, each one sentence,
+  grounded in the data (answers, verdicts, visual/communication metrics).
+  If there are genuinely no strengths, return an empty array. Never invent any.
+- "growth_areas": 2-4 specific gaps, each one sentence. Refer to the concepts
+  or topics they missed.
+- "action_plan": 3-5 concrete next steps the candidate can act on (topics to
+  study, things to practice), each one sentence.
 
 Return STRICT JSON only, no markdown, no backticks:
 {{
-  "overall_summary": "2-4 sentence executive summary",
-  "strengths": ["short phrase", "short phrase"],
-  "growth_areas": ["short phrase"]
+  "overall_summary": "...",
+  "strengths": ["..."],
+  "growth_areas": ["..."],
+  "action_plan": ["..."]
 }}
 
-Round data (any round may be missing — only reference rounds that are present):
+Round data:
 {data}
 """
 
-def generate_executive_summary(technical_eval: dict | None, hr_eval: dict | None, coding_eval: dict | None = None) -> dict:
+
+def _compact_round(ev: dict | None) -> dict | None:
+    """Trim a round evaluation down to what the LLM needs: rating, summary,
+    and per-question verdict + matched/missed concepts."""
+    if not ev:
+        return None
+    return {
+        "rating": ev.get("overall_rating"),
+        "summary": ev.get("overall_summary"),
+        "questions": [
+            {
+                "question": q.get("question"),
+                "verdict": q.get("verdict"),
+                "matched": (q.get("matched_keywords") or [])[:5],
+                "missed": (q.get("missed_keywords") or [])[:5],
+            }
+            for q in ev.get("per_question_feedback", [])
+        ],
+    }
+
+
+def _as_str_list(v) -> list:
+    if not isinstance(v, list):
+        return []
+    return [s.strip() for s in v if isinstance(s, str) and s.strip()]
+
+
+def generate_executive_summary(
+    technical_eval: dict | None = None,
+    hr_eval: dict | None = None,
+    coding_eval: dict | None = None,
+    visual: dict | None = None,
+) -> dict:
     """
-    Combines whichever round evaluations exist into one narrative summary
-    for the top of the full report. Call this once both/all requested
-    rounds are complete — not from generate_final_feedback(), which only
-    knows about a single round at a time.
+    Builds the closing narrative for the report from whichever round
+    evaluations are passed in (pass None for rounds that should not appear).
+
+    `visual` is an optional compact dict of posture / eye-contact / voice
+    scores for the round being reported, so communication strengths can be
+    mentioned too.
+
+    Returns: overall_summary, strengths, growth_areas, action_plan.
+    The returned dict has "fallback": True when the LLM call failed, so
+    callers can avoid caching a degraded result.
     """
     rounds_present = {
-        "technical": technical_eval and {
-            "rating": technical_eval.get("overall_rating"),
-            "summary": technical_eval.get("overall_summary"),
-        },
-        "hr": hr_eval and {
-            "rating": hr_eval.get("overall_rating"),
-            "summary": hr_eval.get("overall_summary"),
-        },
+        "technical": _compact_round(technical_eval),
+        "hr": _compact_round(hr_eval),
         "coding": coding_eval,
+        "visual_behavior": visual,
     }
     rounds_present = {k: v for k, v in rounds_present.items() if v}
 
     if not rounds_present:
-        return {"overall_summary": "No rounds completed yet.", "strengths": [], "growth_areas": []}
+        return {
+            "overall_summary": "No rounds completed yet.",
+            "strengths": [],
+            "growth_areas": [],
+            "action_plan": [],
+        }
 
     prompt = EXEC_SUMMARY_PROMPT.format(data=json.dumps(rounds_present, ensure_ascii=False))
 
@@ -170,12 +217,40 @@ def generate_executive_summary(technical_eval: dict | None, hr_eval: dict | None
         )
         parsed = json.loads(response.choices[0].message.content)
         if isinstance(parsed, dict) and "overall_summary" in parsed:
-            return parsed
+            return {
+                "overall_summary": parsed["overall_summary"],
+                "strengths": _as_str_list(parsed.get("strengths")),
+                "growth_areas": _as_str_list(parsed.get("growth_areas")),
+                "action_plan": _as_str_list(parsed.get("action_plan")),
+            }
         print("GROQ WARNING: unexpected exec summary shape:", parsed)
     except Exception as e:
         print("GROQ ERROR (exec summary):", repr(e))
 
-    fallback_summary = " ".join(
-        v["summary"] for v in rounds_present.values() if isinstance(v, dict) and v.get("summary")
-    ) or "Report summary unavailable."
-    return {"overall_summary": fallback_summary, "strengths": [], "growth_areas": []}
+    return _fallback_exec_summary(technical_eval, hr_eval)
+
+
+def _fallback_exec_summary(technical_eval: dict | None, hr_eval: dict | None) -> dict:
+    """Deterministic content built from verdicts, used when the LLM call fails."""
+    evals = [e for e in (technical_eval, hr_eval) if e]
+    summary = " ".join(e.get("overall_summary", "") for e in evals).strip() or "Report summary unavailable."
+
+    strengths, growth, plan = [], [], []
+    for e in evals:
+        for q in e.get("per_question_feedback", []):
+            topic = (q.get("question") or "").rstrip("?")
+            if not topic:
+                continue
+            if q.get("verdict") == "Strong Answer":
+                strengths.append(f"Answered well: {topic}")
+            elif q.get("verdict") == "Needs Work":
+                growth.append(f"Needs work: {topic}")
+                plan.append(f"Revise and practise answering: {topic}")
+
+    return {
+        "overall_summary": summary,
+        "strengths": strengths[:4],
+        "growth_areas": growth[:4],
+        "action_plan": plan[:5],
+        "fallback": True,
+    }
