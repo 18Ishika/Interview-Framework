@@ -130,9 +130,10 @@ function buildHrReport({ hrReport, hrMetrics, candidate, dateLabel }) {
   };
 }
 
-// AI-generated executive summary (spans whichever rounds are done) —
-// overrides the per-round `overall.summary` shown in RoundSummary. Safe
-// no-op if the full-report fetch failed or only one round exists so far.
+// AI-generated closing content for the round being reported: executive
+// summary (overrides the per-round `overall.summary` shown in RoundSummary)
+// plus strengths / improvements / action plan for the StrengthsAndGrowth
+// card. Safe no-op if the full-report fetch failed.
 function mergeFullReport(report, fullReportRes) {
   if (!fullReportRes || fullReportRes.status !== "completed") return report;
   return {
@@ -140,6 +141,11 @@ function mergeFullReport(report, fullReportRes) {
     overall: {
       ...report.overall,
       summary: fullReportRes.overall_summary || report.overall.summary,
+    },
+    feedback: {
+      strengths: fullReportRes.strengths,
+      improvements: fullReportRes.growth_areas,
+      actionPlan: fullReportRes.action_plan,
     },
   };
 }
@@ -176,8 +182,10 @@ export async function fetchReportData({ sessionId, roundType, getToken, role, co
     avatarUrl: profileRes?.user?.profile_img_url,
   };
 
+  // Scope the summary to the round this report shows, so a technical report
+  // never mentions an HR round that isn't on the page (and vice versa).
   const fullReportRes = sessionId
-    ? await getFullReport(sessionId, getToken).catch((err) => {
+    ? await getFullReport(sessionId, getToken, roundType === "hr" ? "hr" : "technical").catch((err) => {
         console.warn("Full report fetch failed:", err);
         return null;
       })

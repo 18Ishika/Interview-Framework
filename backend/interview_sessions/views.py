@@ -301,45 +301,100 @@ def get_technical_results_by_session_view(request, session_id):
 })
 
 
+import hashlib
+import json
+
+EXEC_SUMMARY_CACHE_TTL = 60 * 60 * 24  # 24h
+
+
+def _visual_snapshot(round_obj):
+    """Compact posture / eye-contact / voice scores for the LLM (no event lists)."""
+    if not round_obj:
+        return None
+    snap = {}
+    for label, metric in (
+        ("posture", round_obj.posture_metric),
+        ("eye_contact", round_obj.eye_contact_metrics),
+        ("voice", round_obj.voice_metrics),
+    ):
+        if isinstance(metric, dict):
+            item = {k: metric[k] for k in ("score", "feedback") if k in metric}
+            if item:
+                snap[label] = item
+    return snap or None
+
+
+def _summary_cache_key(session_id, round_type, tech_eval, hr_eval, visual):
+    """Key includes a hash of the inputs, so a re-evaluated round never
+    serves a stale summary."""
+    payload = json.dumps([tech_eval, hr_eval, visual], sort_keys=True, default=str)
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    return f"exec_summary:{session_id}:{round_type or 'all'}:{digest}"
+
+
 @api_view(["GET"])
 @authentication_classes([ClerkAuthentication])
 @permission_classes([IsAuthenticated])
 def get_full_report_view(request, session_id):
     """
-    GET /api/interview/full-report/<session_id>/
- 
-    Returns one combined payload for the report header: an AI-generated
-    executive summary spanning whichever rounds are complete, plus each
-    round's score so the frontend doesn't have to fetch technical and HR
-    separately and stitch a summary together itself.
+    GET /api/interview/full-report/<session_id>/?round=technical|hr
+
+    Returns the AI-generated closing section for the report: executive
+    summary, strengths, growth areas and an action plan.
+
+    `round` scopes the summary to the round the report is showing, so a
+    technical report never talks about an HR round (and vice versa). If
+    omitted, every completed round in the session is included.
     """
     try:
         session = Session.objects.get(id=session_id, user=request.user)
     except Session.DoesNotExist:
         return Response({"error": "Session not found"}, status=404)
- 
+
+    round_type = request.query_params.get("round")
+    if round_type not in ("technical", "hr"):
+        round_type = None
+
     tech_round = getattr(session, "technical_round", None)
     hr_round = getattr(session, "hr_round", None)
- 
+
     tech_eval = tech_round.ai_evaluation if (tech_round and tech_round.ai_evaluation) else None
     hr_eval = hr_round.qna_metrics if (hr_round and hr_round.qna_metrics) else None
- 
+
+    # Only talk about the round the report is actually showing
+    if round_type == "technical":
+        hr_eval = None
+    elif round_type == "hr":
+        tech_eval = None
+
     if not tech_eval and not hr_eval:
         return Response({"status": "evaluating", "message": "No completed rounds yet"})
- 
-    exec_summary = generate_executive_summary(tech_eval, hr_eval, coding_eval=None)
- 
+
+    visual_source = hr_round if (round_type == "hr" or not tech_eval) else tech_round
+    visual = _visual_snapshot(visual_source)
+
+    cache_key = _summary_cache_key(session_id, round_type, tech_eval, hr_eval, visual)
+    exec_summary = cache.get(cache_key)
+    if exec_summary is None:
+        exec_summary = generate_executive_summary(
+            tech_eval, hr_eval, coding_eval=None, visual=visual
+        )
+        # Don't cache the degraded fallback; let the next open retry the LLM
+        if not exec_summary.get("fallback"):
+            cache.set(cache_key, exec_summary, EXEC_SUMMARY_CACHE_TTL)
+
     section_scores = []
     if tech_eval and tech_eval.get("overall_rating"):
         section_scores.append({"label": "Technical", "rating": tech_eval["overall_rating"]})
     if hr_eval and hr_eval.get("overall_rating"):
         section_scores.append({"label": "HR", "rating": hr_eval["overall_rating"]})
- 
+
     return Response({
         "status": "completed",
         "target_role": session.target_role,
         "overall_summary": exec_summary["overall_summary"],
         "strengths": exec_summary.get("strengths", []),
         "growth_areas": exec_summary.get("growth_areas", []),
+        "action_plan": exec_summary.get("action_plan", []),
         "section_scores": section_scores,
     })

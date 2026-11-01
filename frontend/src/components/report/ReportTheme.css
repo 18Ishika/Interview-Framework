@@ -1,42 +1,54 @@
 /* ==========================================================================
    Interview Report — shared theme
-   Palette: white / blue / black only. No red or green — verdicts are coded
-   by weight (filled blue -> outlined blue -> outlined black) so meaning
-   doesn't depend on hue alone.
+   Follows the site theme (index.css): terracotta accent, evergreen ink,
+   cream surfaces, display + body fonts, pill chips. Every colour, font and
+   radius reads the site's design token first and falls back to a literal
+   value, so the report still renders if a token is missing and re-themes
+   automatically when index.css changes.
+
+   Verdicts are coded by visual weight, not hue (filled -> tinted ->
+   outlined), so meaning never depends on colour alone and survives a
+   greyscale print. Accent colour is only ever used for fills, bars and
+   rules; text stays evergreen for contrast.
    ========================================================================== */
 
 :root {
-  --ir-white: #ffffff;
-  --ir-surface: #f6f8fb;
-  --ir-border: #e2e7ef;
-  --ir-border-strong: #c7cfdb;
+  /* ink */
+  --ir-black: var(--color-evergreen, #00200b);
+  --ir-text: var(--color-evergreen, #00200b);
+  --ir-text-muted: var(--color-text-secondary, #5b6b5e);
 
-  --ir-black: #0b0f19;
-  --ir-text: #10131a;
-  --ir-text-muted: #5b6472;
+  /* surfaces */
+  --ir-surface: var(--color-bg-primary, #faf6ee);   /* report canvas */
+  --ir-card: var(--color-bg-secondary, #fffdf8);    /* cards */
+  --ir-border: var(--color-border, #e8dfd0);
+  --ir-border-strong: var(--color-border-strong, #d3c6b0);
 
-  --ir-blue-900: #0f2a63;
-  --ir-blue-700: #1d3fa0;
-  --ir-blue-600: #2554c7;
-  --ir-blue-500: #3b6fe0;
-  --ir-blue-100: #e8effe;
-  --ir-blue-50: #f4f7ff;
+  /* accent (terracotta) */
+  --ir-accent: var(--color-primary, #d4a373);       /* fills: badges, avatar */
+  --ir-accent-strong: #c48f5c;                      /* bars, ring, icons */
+  --ir-accent-soft: var(--color-primary-light, #f5e9da);
+  --ir-accent-line: #e9d3b8;
 
-  --ir-radius: 10px;
-  --ir-radius-sm: 6px;
-  --ir-shadow: 0 1px 2px rgba(11, 15, 25, 0.04), 0 1px 12px rgba(11, 15, 25, 0.03);
-  --ir-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* shape + type */
+  --ir-radius: var(--radius-lg, 16px);
+  --ir-radius-sm: var(--radius-md, 10px);
+  --ir-radius-xl: var(--radius-xl, 22px);
+  --ir-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 32, 11, 0.05), 0 2px 14px rgba(0, 32, 11, 0.04));
+  --ir-font: var(--font-body, "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif);
+  --ir-font-display: var(--font-display, "Bricolage Grotesque", var(--ir-font));
 }
 
 .ir-report {
   font-family: var(--ir-font);
+  font-size: 14px;
   color: var(--ir-text);
   background: var(--ir-surface);
   max-width: 880px;
   margin: 0 auto;
-  padding: 28px 20px 64px;
-  border: 2px solid var(--ir-blue-600);
-  border-radius: var(--ir-radius);
+  padding: 28px 20px 56px;
+  border: 1px solid var(--ir-border-strong);
+  border-radius: var(--ir-radius-xl);
 }
 
 .ir-report * {
@@ -51,21 +63,25 @@
 
 /* ---- card shell, reused by every section ---- */
 .ir-card {
-  background: var(--ir-white);
+  background: var(--ir-card);
   border: 1px solid var(--ir-border);
   border-radius: var(--ir-radius);
   box-shadow: var(--ir-shadow);
-  padding: 22px 24px;
+  padding: 24px 26px;
 }
 
+/* candidate header: the one warm-tinted card that anchors the page */
 .ir-card--header {
   padding: 18px 22px;
+  background: var(--ir-accent-soft);
+  border-color: var(--ir-accent-line);
 }
 
 .ir-card__title {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-family: var(--ir-font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--ir-black);
   margin: 0 0 2px;
 }
@@ -83,11 +99,20 @@
   margin-bottom: 16px;
 }
 
+/* round score, shown as a pill (inline-block + fixed line-height so it
+   centres correctly in html2canvas PDF export) */
 .ir-section-score {
+  display: inline-block;
+  font-family: var(--ir-font-display);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 15px;
-  color: var(--ir-blue-700);
+  line-height: 20px;
+  padding: 3px 13px;
+  border-radius: 99px;
+  color: var(--ir-black);
+  background: var(--ir-accent-soft);
+  border: 1px solid var(--ir-accent-line);
 }
 
 /* ---- score bar ---- */
@@ -106,7 +131,7 @@
 
 .ir-bar-track {
   flex: 1;
-  height: 7px;
+  height: 8px;
   border-radius: 99px;
   background: var(--ir-border);
   overflow: hidden;
@@ -115,7 +140,7 @@
 .ir-bar-fill {
   height: 100%;
   border-radius: 99px;
-  background: var(--ir-blue-600);
+  background: var(--ir-accent-strong);
 }
 
 .ir-bar-row__value {
@@ -127,40 +152,44 @@
   color: var(--ir-black);
 }
 
-/* ---- badges / chips ---- */
+/* ---- badges / chips (inline-block, not inline-flex: html2canvas draws
+   inline-flex text a few px off-centre) ---- */
 .ir-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  display: inline-block;
   font-size: 12px;
   font-weight: 600;
-  padding: 3px 10px;
+  line-height: 18px;
+  padding: 2px 11px;
   border-radius: 99px;
   white-space: nowrap;
-  line-height: 1;
+  border: 1px solid transparent;
 }
 
+/* filled — same recipe as the site's primary pill button */
 .ir-badge--strong {
-  background: var(--ir-blue-600);
-  color: var(--ir-white);
-}
-
-.ir-badge--partial {
-  background: var(--ir-blue-50);
-  color: var(--ir-blue-700);
-  border: 1px solid var(--ir-blue-100);
-}
-
-.ir-badge--weak {
-  background: var(--ir-white);
+  background: var(--ir-accent);
+  border-color: var(--ir-accent);
   color: var(--ir-black);
-  border: 1px solid var(--ir-black);
+}
+
+/* tinted */
+.ir-badge--partial {
+  background: var(--ir-accent-soft);
+  border-color: var(--ir-accent-line);
+  color: var(--ir-black);
+}
+
+/* outlined */
+.ir-badge--weak {
+  background: transparent;
+  border-color: var(--ir-black);
+  color: var(--ir-black);
 }
 
 .ir-badge--neutral {
   background: var(--ir-surface);
+  border-color: var(--ir-border);
   color: var(--ir-text-muted);
-  border: 1px solid var(--ir-border);
 }
 
 /* ---- keyword tags ---- */
@@ -171,31 +200,33 @@
 }
 
 .ir-tag {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
+  display: inline-block;
   font-size: 12px;
-  padding: 4px 9px;
+  line-height: 16px;
+  padding: 3px 10px;
   border-radius: 99px;
   border: 1px solid var(--ir-border);
 }
 
+/* covered = tinted + solid edge */
 .ir-tag--hit {
-  color: var(--ir-blue-700);
-  background: var(--ir-blue-50);
-  border-color: var(--ir-blue-100);
+  color: var(--ir-black);
+  background: var(--ir-accent-soft);
+  border-color: var(--ir-accent-line);
 }
 
+/* missed = empty + dashed edge, so "absent" reads without relying on colour */
 .ir-tag--miss {
   color: var(--ir-text-muted);
-  background: var(--ir-white);
+  background: transparent;
+  border: 1px dashed var(--ir-border-strong);
 }
 
 /* ---- QA card ---- */
 .ir-qa {
   border: 1px solid var(--ir-border);
   border-radius: var(--ir-radius-sm);
-  padding: 14px 16px;
+  padding: 15px 17px;
 }
 
 .ir-qa + .ir-qa {
@@ -213,13 +244,14 @@
 .ir-qa__question {
   font-size: 13.5px;
   font-weight: 600;
+  line-height: 1.5;
   color: var(--ir-black);
   margin: 0;
 }
 
 .ir-qa__feedback {
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: var(--ir-text-muted);
   margin: 0 0 10px;
 }
@@ -260,16 +292,19 @@
 }
 
 .ir-avatar {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
-  background: var(--ir-blue-600);
-  color: var(--ir-white);
+  background: var(--ir-accent);
+  border: 2px solid var(--ir-card);
+  color: var(--ir-black);
   text-align: center;
-  line-height: 52px; /* centers initials via line-height, not flex — flex-centered
-                         single-line text renders a few px low in html2canvas */
+  line-height: 50px; /* content-box height (54px - 2*2px border) — centres initials
+                        via line-height, not flex; flex-centred single-line text
+                        renders a few px low in html2canvas */
+  font-family: var(--ir-font-display);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 18px;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -281,8 +316,10 @@
 }
 
 .ir-person__name {
-  font-size: 19px;
+  font-family: var(--ir-font-display);
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ir-black);
   margin: 0;
 }
@@ -312,31 +349,34 @@
 
 /* ---- overall score circle ---- */
 .ir-score-circle {
-  width: 68px;
-  height: 68px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 3px solid var(--ir-blue-600);
+  border: 4px solid var(--ir-accent-strong);
+  background: var(--ir-accent-soft);
   text-align: center;
-  line-height: 62px; /* content-box height (68px - 2*3px border) — centers via
-                         line-height, not flex; flex-centered single-line text
-                         renders a few px low in html2canvas */
-  font-size: 20px;
+  line-height: 64px; /* content-box height (72px - 2*4px border) — centres via
+                        line-height, not flex (html2canvas, see .ir-avatar) */
+  font-family: var(--ir-font-display);
+  font-size: 24px;
   font-weight: 700;
-  color: var(--ir-blue-700);
+  color: var(--ir-black);
   margin-left: auto;
 }
 
-/* ---- round summary strip ---- */
+/* ---- round summary strip ----
+   auto-fill (not auto-fit) so a single round stays a tidy tile instead of
+   stretching across the whole card. */
 .ir-round-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 12px;
 }
 
 .ir-round-card {
   border: 1px solid var(--ir-border);
   border-radius: var(--ir-radius-sm);
-  padding: 14px;
+  padding: 14px 16px;
 }
 
 .ir-round-card__title {
@@ -347,8 +387,10 @@
 }
 
 .ir-round-card__score {
-  font-size: 22px;
+  font-family: var(--ir-font-display);
+  font-size: 26px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ir-black);
   font-variant-numeric: tabular-nums;
 }
@@ -359,17 +401,17 @@
   margin-top: 4px;
 }
 
-/* ---- metric grid (behavior/communication) ---- */
+/* ---- metric grid (behavior/communication) — auto-fill, same reason ---- */
 .ir-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
 }
 
 .ir-metric {
   border: 1px solid var(--ir-border);
   border-radius: var(--ir-radius-sm);
-  padding: 14px;
+  padding: 14px 16px;
 }
 
 .ir-metric__label {
@@ -385,12 +427,14 @@
   flex: 0 0 auto;
   width: 15px;
   height: 15px;
-  color: var(--ir-blue-600);
+  color: var(--ir-accent-strong);
 }
 
 .ir-metric__value {
-  font-size: 24px;
+  font-family: var(--ir-font-display);
+  font-size: 26px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ir-black);
   font-variant-numeric: tabular-nums;
 }
@@ -405,7 +449,7 @@
 /* ---- stat row (coding round quick stats) ---- */
 .ir-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -413,8 +457,8 @@
 .ir-stat {
   padding: 12px 14px;
   border-radius: var(--ir-radius-sm);
-  background: var(--ir-blue-50);
-  border: 1px solid var(--ir-blue-100);
+  background: var(--ir-accent-soft);
+  border: 1px solid var(--ir-accent-line);
 }
 
 .ir-stat__label {
@@ -424,51 +468,65 @@
 }
 
 .ir-stat__value {
+  font-family: var(--ir-font-display);
   font-size: 17px;
   font-weight: 700;
-  color: var(--ir-blue-700);
+  color: var(--ir-black);
 }
 
-/* ---- list bullets (strengths / growth areas) ---- */
+/* ---- list bullets (strengths / growth areas / next steps) ----
+   filled dot = strength / action, hollow ring = gap. Weight, not hue. */
 .ir-bullet-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ir-bullet-list li {
   display: flex;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.5;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
   color: var(--ir-text);
 }
 
 .ir-bullet-dot {
   flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   margin-top: 6px;
   border-radius: 50%;
-  background: var(--ir-blue-600);
+  background: var(--ir-accent-strong);
 }
 
 .ir-bullet-dot--muted {
-  background: var(--ir-black);
+  background: transparent;
+  border: 2px solid var(--ir-black);
 }
 
 .ir-two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 24px;
+}
+
+.ir-two-col > div + div {
+  border-left: 1px solid var(--ir-border);
+  padding-left: 24px;
 }
 
 @media (max-width: 620px) {
   .ir-two-col {
     grid-template-columns: 1fr;
+  }
+  .ir-two-col > div + div {
+    border-left: none;
+    border-top: 1px solid var(--ir-border);
+    padding-left: 0;
+    padding-top: 20px;
   }
   .ir-header {
     flex-direction: column;
@@ -493,12 +551,14 @@
 .ir-divider {
   border: none;
   border-top: 1px solid var(--ir-border);
-  margin: 20px 0 16px;
+  margin: 22px 0 18px;
 }
 
 .ir-subsection-title {
-  font-size: 12.5px;
-  font-weight: 650;
+  font-family: var(--ir-font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--ir-black);
   margin: 0 0 12px;
 }
@@ -506,12 +566,21 @@
 /* ---- print / PDF ---- */
 @media print {
   .ir-report {
-    background: var(--ir-white);
+    background: var(--ir-card);
     max-width: none;
     padding: 0;
+    border: none;
+    border-radius: 0;
+  }
+  .ir-report * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact; /* keep tinted fills when printing to PDF */
   }
   .ir-card {
     box-shadow: none;
+    break-inside: avoid;
+  }
+  .ir-qa {
     break-inside: avoid;
   }
 }

@@ -1,4 +1,3 @@
-import { goNext, hasNextRound } from '../../utils/sessionFlow';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -50,8 +49,9 @@ export default function CodingRoundPage() {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [finalSummary, setFinalSummary] = useState(null);
 
-  // Already Completed / Warning Popup State
-  const [warningModal, setWarningModal] = useState(null);
+  // Already Completed Popup State
+  const [alreadyCompletedInfo, setAlreadyCompletedInfo] = useState(null);
+  const [showAlreadyCompletedModal, setShowAlreadyCompletedModal] = useState(false);
 
   const timerRef = useRef(null);
   const editorRef = useRef(null);
@@ -67,7 +67,7 @@ export default function CodingRoundPage() {
   const handleStartAssessment = async (forceNew = false) => {
     setLoading(true);
     setInitError('');
-    setWarningModal(null);
+    setShowAlreadyCompletedModal(false);
 
     try {
       // 1. Fetch or create coding session with round flexibility logic
@@ -75,28 +75,8 @@ export default function CodingRoundPage() {
 
       if (res.already_completed) {
         exitFullscreenSafely();
-        if (hasNextRound()) {
-          alert('Coding round already completed for this session. Proceeding to Technical Round...');
-          goNext(navigate, '/dashboard');
-          return;
-        }
-        setWarningModal({
-          type: 'already_completed',
-          title: 'Round Already Completed',
-          message: res.message || 'You have already completed the Coding Round for this interview session.',
-          details: res,
-        });
-        return;
-      }
-
-      if (res.entitlement_exceeded) {
-        exitFullscreenSafely();
-        setWarningModal({
-          type: 'limit_reached',
-          title: 'Session Limit Reached',
-          message: res.error || res.message || 'You have reached your daily limit of sessions for today. Your limit will reset tomorrow.',
-          details: res,
-        });
+        setAlreadyCompletedInfo(res);
+        setShowAlreadyCompletedModal(true);
         return;
       }
 
@@ -128,30 +108,7 @@ export default function CodingRoundPage() {
       setPhase('workspace');
     } catch (err) {
       console.error('Error starting coding round:', err);
-      const data = err.data || {};
-      const isAlreadyCompleted = Boolean(
-        data.already_completed ||
-        err.message?.toLowerCase().includes('already completed')
-      );
-      const isLimitReached = Boolean(
-        data.entitlement_exceeded ||
-        err.message?.toLowerCase().includes('daily') ||
-        err.message?.toLowerCase().includes('limit') ||
-        err.message?.toLowerCase().includes('subscription') ||
-        err.status === 403
-      );
-
-      if (isAlreadyCompleted || isLimitReached) {
-        exitFullscreenSafely();
-        setWarningModal({
-          type: isAlreadyCompleted ? 'already_completed' : 'limit_reached',
-          title: isAlreadyCompleted ? 'Round Already Completed' : 'Session Limit Reached',
-          message: err.message || 'Unable to start coding assessment.',
-          details: data,
-        });
-      } else {
-        setInitError(err.message || 'Error connecting to coding server');
-      }
+      setInitError(err.message || 'Error connecting to coding server');
     } finally {
       setLoading(false);
     }
@@ -224,11 +181,6 @@ export default function CodingRoundPage() {
       setFinalSummary(res);
       setPhase('completed');
       exitFullscreenSafely();
-      if (hasNextRound()) {
-        setTimeout(() => {
-          goNext(navigate, '/dashboard');
-        }, 1500);
-      }
     } catch (e) {
       console.error('Auto finish error:', e);
     }
@@ -284,26 +236,28 @@ export default function CodingRoundPage() {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // Define custom high-contrast dark theme matching platform
+    // Cream editor theme matching the InterviewIQ palette
     monaco.editor.defineTheme('interviewIQTheme', {
-      base: 'vs-dark',
+      base: 'vs',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '38bdf8', fontStyle: 'bold' },
-        { token: 'string', foreground: '34d399' },
-        { token: 'number', foreground: 'fbbf24' },
-        { token: 'type', foreground: '818cf8' },
-        { token: 'function', foreground: '60a5fa' },
+        { token: 'comment', foreground: '7D8A80', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '9A6A3A', fontStyle: 'bold' },
+        { token: 'string', foreground: '5E8562' },
+        { token: 'number', foreground: 'B7791F' },
+        { token: 'type', foreground: '4A5D4F' },
+        { token: 'function', foreground: '7A5230' },
       ],
       colors: {
-        'editor.background': '#090e17',
-        'editor.foreground': '#e2e8f0',
-        'editor.lineHighlightBackground': '#131e2e',
-        'editorLineNumber.foreground': '#334155',
-        'editorLineNumber.activeForeground': '#38bdf8',
-        'editor.selectionBackground': '#1e3a5f',
-        'editorCursor.foreground': '#38bdf8',
+        'editor.background': '#FDFAF1',
+        'editor.foreground': '#00200B',
+        'editor.lineHighlightBackground': '#F8F2E4',
+        'editorLineNumber.foreground': '#B5AD98',
+        'editorLineNumber.activeForeground': '#9A6A3A',
+        'editor.selectionBackground': '#EBD3B8',
+        'editorCursor.foreground': '#9A6A3A',
+        'editorIndentGuide.background1': '#E7DDC8',
+        'editorWidget.background': '#FDFAF1',
       },
     });
 
@@ -386,11 +340,6 @@ export default function CodingRoundPage() {
       setFinalSummary(res);
       setPhase('completed');
       exitFullscreenSafely();
-      if (hasNextRound()) {
-        setTimeout(() => {
-          goNext(navigate, '/dashboard');
-        }, 1500);
-      }
     } catch (e) {
       alert('Error finalizing round: ' + e.message);
     } finally {
@@ -408,80 +357,61 @@ export default function CodingRoundPage() {
           error={initError}
         />
 
-        {/* Warning Modal (Same style as Tech and HR Preflight) */}
-        {warningModal && (
+        {/* Already Completed Modal */}
+        {showAlreadyCompletedModal && (
           <div className="session-modal-overlay">
             <div className="session-modal-card">
-              <div
-                className="session-modal-icon"
-                style={{
-                  background: warningModal.type === 'already_completed' ? '#EAF6F0' : '#FEF3C7',
-                  color: warningModal.type === 'already_completed' ? '#2A7A52' : '#D97706',
-                }}
-              >
-                {warningModal.type === 'already_completed' ? (
-                  <i className="ti ti-circle-check" />
-                ) : (
-                  <i className="ti ti-alert-triangle" />
-                )}
+              <div className="session-modal-icon">
+                <i className="ti ti-circle-check" />
               </div>
-              <h2 className="session-modal-title">{warningModal.title}</h2>
-              <p className="session-modal-text">{warningModal.message}</p>
+              <h2 className="session-modal-title">Round Already Completed</h2>
+              <p className="session-modal-text">
+                {alreadyCompletedInfo?.message ||
+                  'You have already completed the Coding Round for this interview session.'}
+              </p>
 
               {/* Session Status Overview */}
-              {warningModal.details?.already_completed && (
+              {alreadyCompletedInfo && (
                 <div className="session-status-list">
                   <div className="session-status-row">
                     <span className="session-status-label">Coding Round</span>
-                    <span className={`session-status-pill session-status-pill--${warningModal.details.coding_status || 'completed'}`}>
-                      {warningModal.details.coding_status || 'completed'}
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.coding_status}`}>
+                      {alreadyCompletedInfo.coding_status}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">Technical Round</span>
-                    <span className={`session-status-pill session-status-pill--${warningModal.details.tech_status || 'pending'}`}>
-                      {warningModal.details.tech_status || 'pending'}
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.tech_status}`}>
+                      {alreadyCompletedInfo.tech_status}
                     </span>
                   </div>
                   <div className="session-status-row">
                     <span className="session-status-label">HR Round</span>
-                    <span className={`session-status-pill session-status-pill--${warningModal.details.hr_status || 'pending'}`}>
-                      {warningModal.details.hr_status || 'pending'}
+                    <span className={`session-status-pill session-status-pill--${alreadyCompletedInfo.hr_status}`}>
+                      {alreadyCompletedInfo.hr_status}
                     </span>
                   </div>
                 </div>
               )}
 
               <div className="session-modal-actions">
-                {warningModal.type === 'limit_reached' && (
-                  <button
-                    className="session-btn-primary"
-                    onClick={() => navigate('/pricing')}
-                  >
-                    View Subscription Plans →
-                  </button>
-                )}
-                {warningModal.type === 'already_completed' && (
-                  <button
-                    className="session-btn-primary"
-                    onClick={() => navigate('/interview')}
-                  >
-                    Continue Remaining Rounds (Technical / HR)
-                  </button>
-                )}
-                {warningModal.type === 'already_completed' && (
-                  <button
-                    className="session-btn-secondary"
-                    onClick={() => navigate('/interview/history')}
-                  >
-                    View History
-                  </button>
-                )}
+                <button
+                  className="session-btn-primary"
+                  onClick={() => navigate('/interview')}
+                >
+                  Continue Remaining Rounds (Technical / HR)
+                </button>
+                <button
+                  className="session-btn-secondary"
+                  onClick={() => navigate('/interview/history')}
+                >
+                  View History
+                </button>
                 <button
                   className="session-btn-close"
-                  onClick={() => setWarningModal(null)}
+                  onClick={() => setShowAlreadyCompletedModal(false)}
                 >
-                  Dismiss
+                  Close
                 </button>
               </div>
             </div>
@@ -495,8 +425,8 @@ export default function CodingRoundPage() {
   if (phase === 'completed') {
     return (
       <div className="coding-intro-container">
-        <div className="coding-intro-card" style={{ textAlign: 'center', maxWidth: '640px' }}>
-          <div style={{ fontSize: '52px', color: 'var(--color-success, #2A7A52)', marginBottom: '16px' }}>
+        <div className="coding-intro-card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', color: '#5E8562', marginBottom: '16px' }}>
             <i className="ti ti-circle-check" />
           </div>
           <h1 className="coding-intro-title">Assessment Submitted!</h1>
@@ -506,49 +436,40 @@ export default function CodingRoundPage() {
 
           <div
             style={{
-              background: 'var(--color-bg-secondary, #FDFAF1)',
+              background: 'var(--color-bg-primary, #F8F2E4)',
               border: '1px solid var(--color-border, #E7DDC8)',
-              borderRadius: 'var(--radius-md, 14px)',
-              padding: '28px',
+              borderRadius: '12px',
+              padding: '24px',
               marginBottom: '28px',
             }}
           >
             <div
               style={{
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: '700',
-                color: 'var(--color-text-secondary, #4A5D4F)',
+                color: 'var(--color-text-muted, #7D8A80)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.06em',
                 marginBottom: '8px',
               }}
             >
               Final Round Score
             </div>
-            <div
-              style={{
-                fontSize: '46px',
-                fontWeight: '800',
-                color: 'var(--color-text-primary, #00200B)',
-                fontFamily: 'var(--font-display, inherit)',
-              }}
-            >
+            <div style={{ fontSize: '42px', fontWeight: '700', fontFamily: 'var(--font-display)', color: '#9A6A3A' }}>
               {finalSummary?.total_score || 0}%
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
-              onClick={() => goNext(navigate, '/dashboard')}
+              onClick={() => navigate('/dashboard')}
               className="btn-start-coding"
               style={{ padding: '12px 28px' }}
             >
-              {hasNextRound() ? 'Continue to Next Round' : 'Return to Dashboard'}
+              Return to Dashboard
             </button>
             <button
               onClick={() => navigate('/interview/history')}
               className="session-btn-secondary"
-              style={{ padding: '12px 24px' }}
             >
               View Interview History
             </button>
@@ -599,39 +520,18 @@ export default function CodingRoundPage() {
       {showFinishConfirm && (
         <div className="security-warning-overlay">
           <div className="security-modal">
-            <div className="security-modal__icon" style={{ color: '#3b82f6' }}>
+            <div className="security-modal__icon" style={{ background: '#EBD3B8', color: '#9A6A3A' }}>
               <i className="ti ti-help-circle" />
             </div>
             <h2 className="security-modal__title">Finish Assessment?</h2>
             <p className="security-modal__text">
               Are you sure you want to finish the coding round? Your current solutions will be finalized and evaluated.
             </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowFinishConfirm(false)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#1e293b',
-                  border: '1px solid #334155',
-                  color: '#e2e8f0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
+            <div className="modal-btn-row">
+              <button className="btn-modal-cancel" onClick={() => setShowFinishConfirm(false)}>
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmFinish}
-                style={{
-                  padding: '10px 24px',
-                  background: '#2563eb',
-                  border: 'none',
-                  color: '#ffffff',
-                  borderRadius: '6px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-              >
+              <button className="btn-modal-confirm" onClick={handleConfirmFinish}>
                 Yes, Submit All
               </button>
             </div>
@@ -643,8 +543,8 @@ export default function CodingRoundPage() {
       <header className="coding-header">
         <div className="coding-header__left">
           <div className="coding-header__brand">
-            <i className="ti ti-code" style={{ color: '#4F8AC0', fontSize: '20px' }} />
-            <span>Interview<span style={{ color: '#7bb3e8' }}>IQ</span></span>
+            <i className="ti ti-code" style={{ color: '#9A6A3A', fontSize: '20px' }} />
+            <span>Interview<span style={{ color: '#9A6A3A' }}>IQ</span></span>
             <span className="coding-header__brand-tag">PROCTORED</span>
           </div>
         </div>
@@ -894,8 +794,8 @@ export default function CodingRoundPage() {
                       <div
                         className="tc-field-box"
                         style={{
-                          borderColor: currentCase.passed ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
-                          color: currentCase.passed ? '#34d399' : '#f87171',
+                          borderColor: currentCase.passed ? '#B9D1BB' : '#EBC1BC',
+                          color: currentCase.passed ? '#3F6443' : '#9E3F38',
                         }}
                       >
                         {currentCase.actual_output || '(Empty output)'}
@@ -905,8 +805,8 @@ export default function CodingRoundPage() {
 
                   {currentCase.stderr && (
                     <div className="tc-field" style={{ gridColumn: '1 / -1' }}>
-                      <span className="tc-field-label" style={{ color: '#f87171' }}>Error Log</span>
-                      <div className="tc-field-box" style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+                      <span className="tc-field-label" style={{ color: '#C4574F' }}>Error Log</span>
+                      <div className="tc-field-box" style={{ borderColor: '#EBC1BC', color: '#9E3F38' }}>
                         {currentCase.stderr}
                       </div>
                     </div>
