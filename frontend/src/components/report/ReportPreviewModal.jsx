@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { fetchReportData } from "../../utils/buildInterviewReport";
 import InterviewReport from "../../pages/interview/InterviewReport";
@@ -45,14 +46,26 @@ export default function ReportPreviewModal({ sessionId, roundType, role, onClose
     };
   }, [sessionId, roundType, getToken]);
 
-  return (
+  // Lock the page behind the modal so only one scrollbar is visible.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Rendered through a portal into <body> so the overlay isn't trapped inside
+  // the page layout's stacking context, and with a z-index above the sidebar,
+  // so the sidebar can no longer paint over the report.
+  return createPortal(
     <div
       onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(11, 15, 25, 0.5)",
-        zIndex: 1000,
+        background: "rgba(0, 32, 11, 0.5)",
+        zIndex: 10000,
         display: "flex",
         justifyContent: "center",
         alignItems: "flex-start",
@@ -63,8 +76,8 @@ export default function ReportPreviewModal({ sessionId, roundType, role, onClose
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#f6f8fb",
-          borderRadius: 12,
+          background: "var(--ir-surface, #faf6ee)",
+          borderRadius: "var(--ir-radius-xl, 22px)",
           width: "100%",
           maxWidth: 940,
           maxHeight: "calc(100vh - 64px)",
@@ -80,8 +93,8 @@ export default function ReportPreviewModal({ sessionId, roundType, role, onClose
             display: "flex",
             justifyContent: "flex-end",
             padding: "12px 16px",
-            background: "#f6f8fb",
-            borderBottom: "1px solid #e2e7ef",
+            background: "var(--ir-surface, #faf6ee)",
+            borderBottom: "1px solid var(--ir-border, #e8dfd0)",
           }}
         >
           <button
@@ -95,16 +108,17 @@ export default function ReportPreviewModal({ sessionId, roundType, role, onClose
 
         <div style={{ padding: "8px 0 24px" }}>
           {loading && (
-            <p style={{ textAlign: "center", color: "#5b6472", padding: "40px 0" }}>
+            <p style={{ textAlign: "center", color: "var(--ir-text-muted, #5b6b5e)", padding: "40px 0" }}>
               Loading report…
             </p>
           )}
           {error && (
-            <p style={{ textAlign: "center", color: "#5b6472", padding: "40px 0" }}>{error}</p>
+            <p style={{ textAlign: "center", color: "var(--ir-text-muted, #5b6b5e)", padding: "40px 0" }}>{error}</p>
           )}
           {report && <InterviewReport report={report} />}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

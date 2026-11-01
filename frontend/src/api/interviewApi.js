@@ -112,10 +112,14 @@ export const getInterviewHistory = (getToken) =>
 export const getTechnicalResultsBySession = (sessionId, getToken) =>
   authFetch(`${INTERVIEW_SESSIONS_URL}/technical/results/${sessionId}/`, {}, getToken);
 
-// AI-generated executive summary spanning whichever rounds are done —
-// see get_full_report_view in interview_sessions/views.py.
-export const getFullReport = (sessionId, getToken) =>
-  authFetch(`${INTERVIEW_SESSIONS_URL}/full-report/${sessionId}/`, {}, getToken);
+// AI-generated closing content for the report (executive summary, strengths,
+// growth areas, action plan) — see get_full_report_view in
+// interview_sessions/views.py. `roundType` ("technical" | "hr") scopes it to
+// the round the report is showing; omit it to include every completed round.
+export const getFullReport = (sessionId, getToken, roundType) => {
+  const query = roundType ? `?round=${encodeURIComponent(roundType)}` : "";
+  return authFetch(`${INTERVIEW_SESSIONS_URL}/full-report/${sessionId}/${query}`, {}, getToken);
+};
 
 // Reuses the same authFetch (token + credentials + error handling) instead
 // of a separate raw fetch, and the same API_ROOT the rest of this file

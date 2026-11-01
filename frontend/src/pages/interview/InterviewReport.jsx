@@ -5,6 +5,7 @@ import RoundSummary from "../../components/report/RoundSummary";
 import TechnicalAnalysis from "../../components/report/TechnicalAnalysis";
 import CodingAnalysis from "../../components/report/CodingAnalysis";
 import HRAnalysis from "../../components/report/HRAnalysis";
+import StrengthsAndGrowth from "../../components/report/StrengthsAndGrowth";
 import "../../components/report/ReportTheme.css";
 
 /**
@@ -30,7 +31,7 @@ import "../../components/report/ReportTheme.css";
  *     hr:        { dateLabel, averageScore, cultureFitScore, questions: [...], communication: {...} },
  *     coding:    { dateLabel, testCasePassRate, codeQuality, timeComplexity, correctnessScore, questions: [...] },
  *   },
- *   recommendations: { recommendation, summary, strengths, growthAreas },
+ *   feedback: { strengths: string[], improvements: string[], actionPlan: string[] },
  * }
  *
  * For a PDF export later: wrap the returned tree in a container with a
@@ -78,7 +79,7 @@ export default function InterviewReport({ report, rootId = "interview-report-roo
         {rounds.technical && <TechnicalAnalysis data={rounds.technical} />}
         {rounds.hr && <HRAnalysis data={rounds.hr} />}
 
-        {report.recommendations && <Recommendations data={report.recommendations} />}
+        {report.feedback && <StrengthsAndGrowth feedback={report.feedback} />}
       </div>
     </div>
   );
